@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SparrowRL — Reinforcement Learning over Commodity Networks</title>
+<title>SparrowRL — Reinforcement Learning across Regions</title>
 <meta name="description" content="SparrowRL trains large-model RL on cheap, cross-cloud GPUs over ordinary 1–10 Gbps links at near-RDMA speed by shipping only the ~1% of weights that change each step — losslessly.">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Reinforcement Learning over Commodity Networks">
+<meta property="og:title" content="Reinforcement Learning across Regions">
 <meta property="og:description" content="79× smaller weight sync, 2.4–9.5× faster geo-distributed RL, within 8.91% of an ideal RDMA supercluster — by exploiting the 1% sparsity of RL updates.">
 <link rel="preconnect" href="https://github.com">
-<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/style.css?v=2">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231c1f26'/%3E%3Cpath d='M7 18.5c5.6 0 9.2-2.6 11.7-8.2.5 4-.5 7.2-2.8 9.4 2.6-.3 4.8-1.7 6.4-3.9-.8 4.7-4.4 7.7-9.3 7.7-2.1 0-3.9-.5-5.3-1.5z' fill='%23ffffff'/%3E%3C/svg%3E">
 </head>
 <body>
@@ -34,7 +34,7 @@
 <header class="hero">
   <div class="wrap">
     <span class="eyebrow">ML Systems · Reinforcement Learning</span>
-    <h1 class="title">Reinforcement Learning over Commodity Networks</h1>
+    <h1 class="title">Reinforcement Learning across Regions</h1>
     <p class="subtitle">SparrowRL trains large-model RL on cheap, cross-cloud GPUs wired together by ordinary 1–10&nbsp;Gbps links — at the throughput of a dedicated RDMA supercluster — by shipping only the&nbsp;~1% of weights that actually change each step, losslessly.</p>
     <p class="byline"><span class="names">Sparrow-RL Team</span> · June 2026 · 8 min read</p>
   </div>
@@ -53,7 +53,13 @@
 
   <p class="lede">Reinforcement learning is how today's strongest reasoning models are built. But the systems that run it quietly assume something most teams don't have: a rack of GPUs stitched together with hundred-gigabit RDMA. SparrowRL removes that assumption — and gets nearly the same speed over the kind of network you can rent by the hour.</p>
 
-  <p>RL post-training follows a simple loop: a <strong>Trainer</strong> updates the policy, then broadcasts the new weights to a fleet of <strong>Rollout Actors</strong> that generate samples and send them back. The catch is that broadcast. Because RL refreshes the <em>entire</em> model every single step, the weight transfer sits squarely on the critical path — and it scales with model size. On a datacenter RDMA fabric this is invisible. On a commodity network, it is the whole story.</p>
+  <!-- ===================== WHO / DEMOCRATIZE ===================== -->
+  <h2 id="who"><span class="kicker">Who it's for</span>Democratizing RL training</h2>
+  <p>For the last few years, RL post-training — the step that turns a capable base model into a strong reasoner — has effectively belonged to whoever could reserve a hundred-gigabit RDMA supercluster. The strange part: the GPUs themselves are no longer scarce — you can rent H100s and A100s by the hour from a dozen providers, across a dozen regions. What you <em>can't</em> cheaply rent is the tightly-coupled fabric that fuses them into one machine, and without it the weight-sync wall (next section) puts RL training out of reach. SparrowRL is about removing that last barrier — so serious RL post-training runs on the cheap, loosely-connected GPUs almost anyone can already get.</p>
+  <p><strong>For academic labs and small teams</strong>, that turns "we can't get a reserved RDMA cluster" into a non-issue: stitch together on-demand GPUs from whatever clouds and regions are cheap and available, and run real large-model RL over the cross-region links between them — at near-RDMA throughput and a better price.</p>
+  <p><strong>For industry</strong>, the same trick attacks the network bottleneck inside disaggregated deployments: dedicate high-bandwidth GPUs to training while using cheaper, loosely-connected accelerators for rollout generation, without the WAN tax that normally makes that split impractical.</p>
+
+  <p>RL post-training follows a simple loop: a <strong>Trainer</strong> updates the policy, then broadcasts the new weights to a fleet of <strong>Rollout Actors</strong> that generate samples and send them back. The catch is that broadcast. Because RL refreshes the <em>entire</em> model every single step, the weight transfer sits squarely on the critical path — and it scales with model size. On a datacenter RDMA fabric this is invisible. On a cross-region network, it is the whole story.</p>
 
   <!-- ===================== PROBLEM ===================== -->
   <h2 id="problem"><span class="kicker">The wall</span>Why RL needs a supercomputer</h2>
@@ -62,14 +68,14 @@
 
   <figure class="bleed">
     <div class="figbox paper">
-      <object type="image/svg+xml" data="assets/figures/two_paradigm.svg" style="width:100%;aspect-ratio:968/366;display:block" aria-label="Two RL deployment paradigms: tightly-coupled RDMA cluster versus loosely-coupled commodity-WAN cluster"></object>
+      <object type="image/svg+xml" data="assets/figures/two_paradigm.svg" style="width:100%;aspect-ratio:968/366;display:block" aria-label="Two RL deployment paradigms: tightly-coupled RDMA cluster versus loosely-coupled cross-region cluster"></object>
     </div>
-    <figcaption><b>Two ways to run RL.</b> <b>(a)</b> Industrial centralized training — Trainer and Actor nodes fused by a 100–800&nbsp;Gbps RDMA fabric in a private, reserved cluster: fast, but high CapEx/OpEx. <b>(b)</b> What SparrowRL targets — a lab's local-GPU Trainer driving rollout Actors scattered across datacenters over ordinary 1–10&nbsp;Gbps commodity WAN: low-cost and accessible, but bandwidth-bottlenecked.</figcaption>
+    <figcaption><b>Two ways to run RL.</b> <b>(a)</b> Industrial centralized training — Trainer and Actor nodes fused by a 100–800&nbsp;Gbps RDMA fabric in a private, reserved cluster: fast, but high CapEx/OpEx. <b>(b)</b> What SparrowRL targets — a lab's local-GPU Trainer driving rollout Actors scattered across datacenters over ordinary 1–10&nbsp;Gbps cross-region WAN: low-cost and accessible, but bandwidth-bottlenecked.</figcaption>
   </figure>
 
   <figure class="bleed">
     <div class="figbox">
-      <svg viewBox="0 0 900 230" role="img" aria-label="Bar chart: syncing a 16 GB update takes 1.3 s on RDMA but 128 s on commodity WAN, overshooting the 45 s rollout window">
+      <svg viewBox="0 0 900 230" role="img" aria-label="Bar chart: syncing a 16 GB update takes 1.3 s on RDMA but 128 s on cross-region WAN, overshooting the 45 s rollout window">
         <text x="24" y="34" class="f-text" font-size="18" font-weight="700">Time to sync one 16&nbsp;GB policy update before the next rollout</text>
         <!-- axis baseline -->
         <line x1="220" y1="180" x2="860" y2="180" class="f-line" stroke-width="1"/>
@@ -83,14 +89,14 @@
         <rect x="220" y="104" width="9" height="30" rx="3" class="ideal"/>
         <text x="240" y="124" class="ideal" font-size="14" font-weight="700">1.3&nbsp;s ✓ fits easily</text>
         <!-- Row 2: commodity 128s -> width 128*4.5 = 576 -> 220..796 -->
-        <text x="40" y="166" class="f-text" font-size="14" font-weight="600">Commodity WAN</text>
+        <text x="40" y="166" class="f-text" font-size="14" font-weight="600">Cross-region WAN</text>
         <rect x="220" y="150" width="576" height="30" rx="3" class="warn"/>
         <text x="806" y="170" class="warn" font-size="15" font-weight="700">128&nbsp;s</text>
         <text x="430" y="170" font-size="13" fill="#fff" font-weight="600">overshoots the window by ~3×</text>
         <text x="40" y="183" class="f-mut" font-size="12">1&nbsp;Gbps</text>
       </svg>
     </div>
-    <figcaption><b>The bandwidth wall.</b> Idealized full-model sync for Qwen3-8B (16&nbsp;GB, fp16). RDMA hides the transfer inside the generation window; a 1&nbsp;Gbps commodity link does not, so even asynchronous RL stalls.</figcaption>
+    <figcaption><b>The bandwidth wall.</b> Idealized full-model sync for Qwen3-8B (16&nbsp;GB, fp16). RDMA hides the transfer inside the generation window; a 1&nbsp;Gbps cross-region link does not, so even asynchronous RL stalls.</figcaption>
   </figure>
 
   <p>This is why state-of-the-art RL systems — OpenRLHF, veRL, StreamRL — are built for tightly-coupled RDMA clusters. And those clusters are exactly what most of the field can't easily get:</p>
@@ -101,7 +107,7 @@
     <li><strong>Procurement gatekeeping.</strong> Reserving large RDMA blocks often requires sales relationships and credit lines that academic labs, government groups, and startups simply don't have.</li>
   </ul>
 
-  <p>Meanwhile, the same 16 GPUs stitched together on-demand from two clouds run ~$26–27/hr with 1-hour billing. The capacity is right there, sitting behind commodity links of 1–10&nbsp;Gbps. The only thing standing between that cheap, abundant capacity and real RL training is the weight-sync wall. So we asked: <strong>can you get RDMA-class RL throughput over a commodity network?</strong></p>
+  <p>Meanwhile, the same 16 GPUs stitched together on-demand from two clouds run ~$26–27/hr with 1-hour billing. The capacity is right there, sitting behind cross-region links of 1–10&nbsp;Gbps. The only thing standing between that cheap, abundant capacity and real RL training is the weight-sync wall. So we asked: <strong>can you get RDMA-class RL throughput over a cross-region network?</strong></p>
 
   <!-- ===================== INSIGHT ===================== -->
   <h2 id="insight"><span class="kicker">The insight</span>RL barely changes the model</h2>
@@ -200,17 +206,17 @@
   <!-- ===================== RESULTS ===================== -->
   <h2 id="results"><span class="kicker">Evidence</span>Does it hold up?</h2>
 
-  <p>The evaluation runs Qwen3 4B/8B/14B with the Trainer on H100s in the US and rollout actors on A100/L40 GPUs in Canada, Japan, the Netherlands, and Iceland, over a real cross-cloud link that fluctuates between ~500&nbsp;Mbps and 1&nbsp;Gbps. Baselines: <b>PrimeRL-Full</b> (broadcast all weights), <b>PrimeRL-MultiStream</b> (broadcast over parallel streams), and <b>Ideal-SingleDC</b> (an idealized 800&nbsp;Gbps RDMA upper bound). Each step now ships a 202&nbsp;MB sparse delta instead of 15.6&nbsp;GB of full weights — a <b>79× cut</b> — and even at 0.25&nbsp;Gbps that delta crosses in seconds, where a full broadcast needs 566&nbsp;s.</p>
+  <p>The evaluation runs Qwen3 4B/8B/14B with the Trainer on H100s in the US and rollout actors on A100/L40 GPUs in Canada, Japan, the Netherlands, and Iceland, over a real cross-cloud link that fluctuates between ~500&nbsp;Mbps and 1&nbsp;Gbps. Baselines: a <b>vanilla cross-DC baseline</b> (full-weight broadcast), its <b>multi-stream</b> variant, and <b>Ideal-SingleDC</b> (an idealized 800&nbsp;Gbps RDMA upper bound). Each step now ships a 202&nbsp;MB sparse delta instead of 15.6&nbsp;GB of full weights — a <b>79× cut</b> — and even at 0.25&nbsp;Gbps that delta crosses in seconds, where a full broadcast needs 566&nbsp;s.</p>
 
   <h3>Throughput tracks the ideal</h3>
   <figure class="bleed">
     <div class="figbox">
       <svg viewBox="0 0 900 300" role="img" aria-label="Grouped bars of end-to-end throughput in tokens per second for Qwen3-4B, 8B and 14B: SparrowRL nearly matches the ideal single-DC RDMA baseline.">
-        <text x="24" y="28" class="f-text" font-size="15" font-weight="700">End-to-end throughput (geomean tokens/s)</text>
+        <text x="26" y="150" transform="rotate(-90 26 150)" text-anchor="middle" class="f-mut" font-size="16" font-weight="700">Throughput (tokens/s)</text>
         <line x1="120" y1="250" x2="860" y2="250" class="f-line"/>
         <g class="f-grid"><line x1="120" y1="195.8" x2="860" y2="195.8"/><line x1="120" y1="141.7" x2="860" y2="141.7"/><line x1="120" y1="87.5" x2="860" y2="87.5"/></g>
         <g class="f-mut" font-size="11" text-anchor="end"><text x="112" y="254">0</text><text x="112" y="199">5k</text><text x="112" y="145">10k</text><text x="112" y="91">15k</text></g>
-        <g font-size="12"><rect x="470" y="18" width="13" height="13" rx="3" class="ideal"/><text x="490" y="29" class="f-mut">Ideal single-DC RDMA</text><rect x="700" y="18" width="13" height="13" rx="3" class="delta"/><text x="720" y="29" class="f-mut">SparrowRL</text></g>
+        <g font-size="14"><rect x="323" y="19" width="13" height="13" rx="3" class="ideal"/><text x="343" y="30" class="f-mut">Ideal single-DC RDMA</text><rect x="499" y="19" width="13" height="13" rx="3" class="delta"/><text x="519" y="30" class="f-mut">SparrowRL</text></g>
         <rect x="182" y="95" width="64" height="155" rx="3" class="ideal"/><text x="214" y="89" class="f-text" font-size="11" text-anchor="middle" font-weight="700">14.3k</text>
         <rect x="254" y="102" width="64" height="148" rx="3" class="delta"/><text x="286" y="96" class="f-text" font-size="11" text-anchor="middle" font-weight="700">13.7k</text>
         <text x="250" y="270" class="f-text" font-size="13" text-anchor="middle" font-weight="700">Qwen3-4B</text>
@@ -223,18 +229,18 @@
         <text x="120" y="292" class="f-mut" font-size="11.5">Within 1.31–8.91% of ideal — and 2.4–9.5× above full-weight broadcast over the same WAN.</text>
       </svg>
     </div>
-    <figcaption><b>Near-ideal, across model sizes.</b> Geometric mean across Hendrycks MATH, GSM8K and DeepScaleR. By keeping weight transfer off the critical path, SparrowRL lands within <b>1.31–8.91%</b> of an ideal single-DC RDMA cluster — and <b>2.4–9.5×</b> above full-weight broadcast over the same commodity WAN.</figcaption>
+    <figcaption><b>Near-ideal, across model sizes.</b> Geometric mean across Hendrycks MATH, GSM8K and DeepScaleR. By keeping weight transfer off the critical path, SparrowRL lands within <b>1.31–8.91%</b> of an ideal single-DC RDMA cluster — and <b>2.4–9.5×</b> above full-weight broadcast over the same cross-region WAN.</figcaption>
   </figure>
 
   <h3>It scales across regions</h3>
   <figure class="bleed">
     <div class="figbox">
-      <svg viewBox="0 0 900 300" role="img" aria-label="Grouped bars: across 1 versus 4 datacenters, PrimeRL-Full throughput collapses from 7137 to 1219 tokens per second while SparrowRL stays near 13k.">
-        <text x="24" y="28" class="f-text" font-size="15" font-weight="700">Throughput across 1 vs 4 datacenters (Qwen3-4B)</text>
+      <svg viewBox="0 0 900 300" role="img" aria-label="Grouped bars: across 1 versus 4 datacenters, the vanilla cross-DC baseline’s throughput collapses from 7137 to 1219 tokens per second while SparrowRL stays near 13k.">
+        <text x="26" y="150" transform="rotate(-90 26 150)" text-anchor="middle" class="f-mut" font-size="16" font-weight="700">Throughput (tokens/s)</text>
         <line x1="120" y1="250" x2="860" y2="250" class="f-line"/>
         <g class="f-grid"><line x1="120" y1="185" x2="860" y2="185"/><line x1="120" y1="120" x2="860" y2="120"/><line x1="120" y1="55" x2="860" y2="55"/></g>
         <g class="f-mut" font-size="11" text-anchor="end"><text x="112" y="254">0</text><text x="112" y="189">5k</text><text x="112" y="124">10k</text><text x="112" y="59">15k</text></g>
-        <g font-size="12"><rect x="470" y="16" width="13" height="13" rx="3" class="full"/><text x="490" y="27" class="f-mut">PrimeRL-Full</text><rect x="650" y="16" width="13" height="13" rx="3" class="delta"/><text x="670" y="27" class="f-mut">SparrowRL</text></g>
+        <g font-size="14"><rect x="307" y="19" width="13" height="13" rx="3" class="full"/><text x="327" y="30" class="f-mut">Vanilla cross-DC baseline</text><rect x="515" y="19" width="13" height="13" rx="3" class="delta"/><text x="535" y="30" class="f-mut">SparrowRL</text></g>
         <rect x="226" y="157.2" width="70" height="92.8" rx="3" class="full"/><text x="261" y="151" class="f-text" font-size="11.5" text-anchor="middle" font-weight="700">7,137</text>
         <rect x="304" y="73.2" width="70" height="176.8" rx="3" class="delta"/><text x="339" y="67" class="delta" font-size="11.5" text-anchor="middle" font-weight="700">≈13.6k</text>
         <text x="300" y="270" class="f-text" font-size="13" text-anchor="middle" font-weight="700">1 datacenter</text>
@@ -244,7 +250,7 @@
         <text x="120" y="292" class="f-mut" font-size="11.5">Full-weight transfer −5.86× across 4 regions; SparrowRL only −13.7% (1.9–9× higher throughput).</text>
       </svg>
     </div>
-    <figcaption><b>Geographic dispersion is nearly free.</b> Full-weight transfer is bound by the slowest actor, so four regions collapse it 5.86× (7,137→1,219 tok/s). SparrowRL loses only 13.7%. <span class="f-mut">(Full endpoints measured; SparrowRL values from the reported −13.7% / 1.9–9× figures.)</span></figcaption>
+    <figcaption><b>Geographic dispersion is nearly free.</b> On Qwen3-4B, full-weight transfer is bound by the slowest actor, so four regions collapse it 5.86× (7,137→1,219 tok/s). SparrowRL loses only 13.7%. <span class="f-mut">(Full endpoints measured; SparrowRL values from the reported −13.7% / 1.9–9× figures.)</span></figcaption>
   </figure>
 
   <p>Three smaller ablations round out the picture, all on the same testbed:</p>
@@ -263,7 +269,7 @@
   <figure class="bleed">
     <div class="figbox">
       <svg viewBox="0 0 900 280" role="img" aria-label="Tokens per dollar: SparrowRL beats a reserved single-DC RDMA cluster by 1.21x at 8B and 1.59x at 14B.">
-        <text x="24" y="28" class="f-text" font-size="15" font-weight="700">Throughput per dollar (million tokens / $)</text>
+        <text x="26" y="148" transform="rotate(-90 26 148)" text-anchor="middle" class="f-mut" font-size="16" font-weight="700">Tokens per dollar (M)</text>
         <!-- y 0..4 over y 240..60 (180px) -> 45px/unit -->
         <line x1="120" y1="240" x2="860" y2="240" class="f-line"/>
         <g class="f-grid"><line x1="120" y1="195" x2="860" y2="195"/><line x1="120" y1="150" x2="860" y2="150"/><line x1="120" y1="105" x2="860" y2="105"/><line x1="120" y1="60" x2="860" y2="60"/></g>
@@ -283,10 +289,10 @@
         <rect x="662" y="145" width="62" height="95" rx="3" class="delta"/><text x="693" y="139" class="f-text" font-size="11.5" text-anchor="middle" font-weight="700">2.12</text><text x="693" y="256" class="f-mut" font-size="10.5" text-anchor="middle">$23.82/hr</text>
         <text x="650" y="120" class="ideal" font-size="13" font-weight="800" text-anchor="middle">1.59×</text>
         <!-- legend -->
-        <g font-size="12"><rect x="640" y="20" width="13" height="13" rx="3" class="full"/><text x="660" y="31" class="f-mut">Reserved single-DC RDMA</text><rect x="640" y="38" width="13" height="13" rx="3" class="delta"/><text x="660" y="49" class="f-mut">SparrowRL (cross-cloud on-demand)</text></g>
+        <g font-size="14"><rect x="234" y="19" width="13" height="13" rx="3" class="full"/><text x="254" y="30" class="f-mut">Reserved single-DC RDMA</text><rect x="430" y="19" width="13" height="13" rx="3" class="delta"/><text x="450" y="30" class="f-mut">SparrowRL (cross-cloud on-demand)</text></g>
       </svg>
     </div>
-    <figcaption><b>Cheaper at comparable throughput.</b> Against an idealized reserved RDMA cluster, SparrowRL delivers 1.21× (8B) to 1.59× (14B) more tokens per dollar by running on-demand, cross-cloud GPUs over commodity links — even before accounting for RDMA minimum-commitment penalties.</figcaption>
+    <figcaption><b>Cheaper at comparable throughput.</b> Against an idealized reserved RDMA cluster, SparrowRL delivers 1.21× (8B) to 1.59× (14B) more tokens per dollar by running on-demand, cross-cloud GPUs over cross-region links — even before accounting for RDMA minimum-commitment penalties.</figcaption>
   </figure>
 
   <!-- ===================== IMPACT ===================== -->
@@ -304,10 +310,17 @@
   </div>
   <p style="color:var(--muted);font-size:14.5px">Δ = 0 by construction — lossless, bit-exact updates yield an identical model. <em>(Scores shown are representative placeholders; drop in the paper's measured pass@1 numbers.)</em></p>
 
-  <h2 id="impact"><span class="kicker">Why it matters</span>Who this is for</h2>
-  <p><strong>For academic labs and small teams</strong>, SparrowRL turns "we can't get a reserved RDMA cluster" into a non-issue: stitch together on-demand GPUs from whatever clouds and regions are cheap and available, and run real large-model RL over the commodity links between them — at near-RDMA throughput and a better price.</p>
-  <p><strong>For industry</strong>, the same trick attacks the network bottleneck inside disaggregated deployments: dedicate high-bandwidth GPUs to training while using cheaper, loosely-connected accelerators for rollout generation, without the WAN tax that normally makes that split impractical.</p>
   <p>And because the compression is <strong>lossless</strong> — bit-exact updates, a preserved one-step policy lag — none of this trades away model quality, unlike approaches built on quantized gradient compression or aggressive staleness. You get the throughput of an expensive network on a cheap one, and the model never knows the difference.</p>
+
+  <hr>
+
+  <!-- ===================== ACKNOWLEDGMENTS ===================== -->
+  <h2 id="ack">Acknowledgments</h2>
+  <ul>
+    <li>Built on <a href="https://github.com/PrimeIntellect-ai/prime-rl">PRIME-RL</a> — PyTorch FSDP2 for training, vLLM for inference.</li>
+    <li>Benchmarked on Hendrycks MATH, GSM8K, and DeepScaleR.</li>
+    <li>A collaboration of the National University of Singapore, Anhui University, USTC, and Renmin University of China.</li>
+  </ul>
 
   <hr>
 
@@ -336,7 +349,6 @@
 
 <footer>
   <div class="wrap">
-    <p><strong>SparrowRL</strong> — RL over commodity networks with lossless sparse deltas. Built on <a href="https://github.com/PrimeIntellect-ai/prime-rl">PRIME-RL</a> (FSDP2 + vLLM).</p>
     <p>National University of Singapore · Anhui University · USTC · Renmin University of China</p>
     <div class="foot-links">
       <a href="https://arxiv.org/abs/2602.11456">Paper</a>

@@ -189,8 +189,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 44px 0; }
   padding: 18px 16px; box-shadow: var(--shadow);
 }
 .stat .big {
-  font-size: 31px; font-weight: 800; letter-spacing: -.02em;
-  color: var(--text);
+  font-size: 26px; font-weight: 800; letter-spacing: -.025em;
+  color: var(--text); white-space: nowrap;
 }
 .stat .lbl { font-size: 13.5px; color: var(--muted); margin-top: 4px; line-height: 1.35; }
 @media (max-width: 720px){ .tldr { grid-template-columns: repeat(2,1fr); } }
