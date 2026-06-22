@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SparrowRL — 跨区域强化学习</title>
+<meta name="description" content="SparrowRL 让大模型 RL 能在灵活租用的跨云 GPU 上运行，即使只有普通 1–10 Gbps 链路。它只传输每步真正变化的约 1% 权重，并以无损方式接近 RDMA 集群速度。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="跨区域强化学习">
+<meta property="og:description" content="利用 RL 更新约 1% 稀疏性，SparrowRL 将每步权重同步缩小 79 倍，使跨区域 RL 快 2.4–9.5 倍，并将吞吐差距缩小到理想 RDMA 集群的 8.91% 以内。">
+<link rel="preconnect" href="https://github.com">
+<link rel="stylesheet" href="assets/style.css?v=2">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231c1f26'/%3E%3Cpath d='M7 18.5c5.6 0 9.2-2.6 11.7-8.2.5 4-.5 7.2-2.8 9.4 2.6-.3 4.8-1.7 6.4-3.9-.8 4.7-4.4 7.7-9.3 7.7-2.1 0-3.9-.5-5.3-1.5z' fill='%23ffffff'/%3E%3C/svg%3E">
+</head>
+<body>
+
+<div class="topbar">
+  <div class="row">
+    <div class="brand">
+      <a href="#top">SparrowRL</a>
+    </div>
+    <div class="spacer"></div>
+    <nav>
+      <a href="#insight">洞察</a>
+      <a href="#design">设计</a>
+      <a href="#results">结果</a>
+      <a href="#cite">论文</a>
+    </nav>
+    <button class="theme-btn" id="themeBtn" aria-label="切换深色模式" title="切换主题">◐</button>
+  </div>
+</div>
+
+<a id="top"></a>
+<header class="hero">
+  <div class="wrap">
+    <span class="eyebrow">机器学习系统 · 强化学习</span>
+    <h1 class="title">跨区域强化学习</h1>
+    <p class="subtitle">SparrowRL 让大模型 RL 能在灵活租用的跨云 GPU 上运行，即使这些 GPU 只通过普通 1–10&nbsp;Gbps 链路连接。它只传输每步真正变化的约&nbsp;1% 权重，并以无损方式接近 RDMA 集群吞吐。</p>
+    <p class="byline"><span class="names">Sparrow-RL 团队</span> · 2026 年 6 月 · 约 8 分钟阅读</p>
+  </div>
+</header>
+
+<div class="wrap">
+<article>
+
+  <!-- TL;DR -->
+  <div class="tldr">
+    <div class="stat"><div class="big">79×</div><div class="lbl">每步权重同步更小（15.6&nbsp;GB → 202&nbsp;MB，Qwen3-8B）</div></div>
+    <div class="stat"><div class="big">2.4–9.5×</div><div class="lbl">相对 WAN 全量权重广播的吞吐提升</div></div>
+    <div class="stat"><div class="big">≤8.91%</div><div class="lbl">相对理想单数据中心 RDMA 基线的吞吐差距</div></div>
+    <div class="stat"><div class="big">1.21–1.59×</div><div class="lbl">相对预留 RDMA 集群的 token/$ 提升</div></div>
+  </div>
+
+  <p class="lede">强化学习正在塑造今天最强的推理模型。但运行这些训练的系统，默认假设团队拥有一整排通过百 Gbps RDMA 连接的 GPU。大多数团队并没有这种条件。SparrowRL 去掉这个假设，让按需租用的普通网络也能接近专用 RDMA 集群的速度。</p>
+
+  <!-- ===================== WHO / MOTIVATION ===================== -->
+  <h2 id="who"><span class="kicker">面向谁</span>为什么跨区域 RL 重要</h2>
+  <p>过去几年，RL 后训练几乎只属于能预留百 Gbps RDMA 超级集群的团队。这一步能把有能力的基础模型变成强推理模型。单个 GPU 往往可以跨供应商、跨区域灵活租用。真正难以按需获得的是把它们连成一个集群的高速互联。没有这种网络，权重同步墙就会把 RL 训练挡在门外。SparrowRL 移除这个障碍，让严肃的 RL 后训练可以跑在灵活、松耦合的 GPU 上。</p>
+  <p>因此，跨区域 RL 不只是部署技巧。它关乎成本和可及性：我们能否让 RL 后训练足够便宜、足够灵活、足够可靠，让更广泛的研究社区都能参与？如果答案仍然依赖预留 RDMA 集群，大多数团队都会被排除在外。如果普通 GPU 可以被拼接起来，更多团队就能真正尝试 RL。</p>
+  <p><strong>对学术实验室和小团队</strong>, SparrowRL 把采购壁垒变成系统问题。团队不必先建立供应商关系、预留固定的 RDMA GPU 集群，也不必在实验尚未验证前就支付长周期配额。它们可以把真正能拿到的 GPU 组装起来：本地机器、按需云实例、合作机构的空闲算力。先小规模启动，GPU 出现时再加入，实验结束后立即停止。SparrowRL 让这种拼接式资源也能支撑严肃的 RL 后训练：基础设施更便宜，调度更灵活，也不需要私有超级集群。</p>
+  <p><strong>对大规模部署</strong>，解耦式 RL 正变得越来越重要，原因很实际：Trainer 和 rollout 池并不需要同一种硬件。策略优化主要受密集训练计算主导，更适合放在互联紧密的高端 GPU 集群上。Rollout 解码常常受显存带宽和容量限制，因此可以利用更便宜、更异构的加速器。大型供应商和实验室本来就有分散在不同区域、云和硬件代际上的 GPU。机会在于把这组碎片化资源变成一个 RL 系统。阻塞点是策略刷新。全量权重同步会让远端 rollout 容量很难保持最新，也很难经济地接入训练循环。SparrowRL 降低这条链路的网络开销：Trainer 留在互联条件最好的集群上，rollout 容量则从任何有 GPU 的地方拉起。稀疏 delta、Relay 扇出和版本感知调度，让系统真正利用全球 GPU 池，而不是让远端资源困在慢链路之后。</p>
+
+  <p>图 1 对比了两种运行模式：一边是预留 RDMA 超级集群，另一边是分散在多个区域的按需 GPU。</p>
+
+  <figure class="bleed">
+    <div class="figbox paper">
+      <object type="image/svg+xml" data="assets/figures/two_paradigm.svg" style="width:100%;aspect-ratio:968/366;display:block" aria-label="两种 RL 部署范式：紧耦合 RDMA 集群与松耦合跨区域集群"></object>
+    </div>
+    <figcaption><b>图 1. RL 的两种运行方式。</b> <b>(a)</b> 紧耦合训练：Trainer 和 Actor 节点由 100–800&nbsp;Gbps RDMA 网络连接在一个私有预留集群中（速度快，但资本和运营成本高）。 <b>(b)</b> 松耦合训练：Trainer 通过普通 1–10&nbsp;Gbps 跨区域 WAN 驱动分散在多个数据中心的 rollout Actor（低成本、易获得，但受带宽限制）。</figcaption>
+  </figure>
+
+  <p>RL 后训练遵循一个简单循环：<strong>Trainer</strong> 更新策略，然后把新权重广播给一组生成样本并回传的 <strong>Rollout Actor</strong>。问题就在这个广播。RL 每一步都要刷新<em>整个</em>模型，因此权重传输正好落在关键路径上，并随模型规模线性增长。在数据中心 RDMA 网络里，这个开销几乎不可见。在跨区域网络里，它就是核心瓶颈。</p>
+
+  <!-- ===================== PROBLEM ===================== -->
+  <h2 id="problem"><span class="kicker">瓶颈</span>为什么 RL 需要超级计算机</h2>
+
+  <p>以 8B 模型为例。BF16 权重约为 16&nbsp;GB，而且每一步都必须发送到<em>每个</em> Actor。100&nbsp;Gbps RDMA 链路上的同步大约需要 <strong>1.3&nbsp;秒</strong>，可以轻松隐藏在 Actor 约 45 秒的生成窗口中（图 2）。如果换成 1&nbsp;Gbps 跨云链路，同步时间会膨胀到 <strong>128&nbsp;秒</strong>，远远超过生成本身。即使是一阶段异步流水，也无法隐藏比被重叠任务还长的传输，GPU 利用率会跌到个位数。</p>
+
+  <figure class="bleed">
+    <div class="figbox">
+      <svg viewBox="0 0 900 230" role="img" aria-label="柱状图：同步 16 GB 更新在 RDMA 上需要 1.3 秒，在跨区域 WAN 上需要 128 秒，超过 45 秒 rollout 窗口">
+        <text x="24" y="34" class="f-text" font-size="18" font-weight="700">下一轮 rollout 前同步一次 16&nbsp;GB 策略更新的时间</text>
+        <!-- axis baseline -->
+        <line x1="220" y1="180" x2="860" y2="180" class="f-line" stroke-width="1"/>
+        <!-- rollout window dashed line at 45s : x = 220 + 45*4.5 = 422.5 -->
+        <line x1="422" y1="64" x2="422" y2="190" class="f-grid" stroke-width="1.5"/>
+        <text x="430" y="76" class="f-mut" font-size="13">≈ 45&nbsp;秒 rollout 窗口</text>
+        <text x="430" y="92" class="f-mut" font-size="12">传输必须小于这个窗口</text>
+        <!-- Row 1: RDMA 1.3s -> width 1.3*4.5 = 5.85 -->
+        <text x="40" y="118" class="f-text" font-size="14" font-weight="600">RDMA 网络</text>
+        <text x="40" y="135" class="f-mut" font-size="12">100&nbsp;Gbps</text>
+        <rect x="220" y="104" width="9" height="30" rx="3" class="ideal"/>
+        <text x="240" y="124" class="ideal" font-size="14" font-weight="700">1.3&nbsp;秒 ✓ 轻松隐藏</text>
+        <!-- Row 2: commodity 128s -> width 128*4.5 = 576 -> 220..796 -->
+        <text x="40" y="166" class="f-text" font-size="14" font-weight="600">跨区域 WAN</text>
+        <rect x="220" y="150" width="576" height="30" rx="3" class="warn"/>
+        <text x="806" y="170" class="warn" font-size="15" font-weight="700">128&nbsp;s</text>
+        <text x="430" y="170" font-size="13" fill="#fff" font-weight="600">超过窗口约 3×</text>
+        <text x="40" y="183" class="f-mut" font-size="12">1&nbsp;Gbps</text>
+      </svg>
+    </div>
+    <figcaption><b>图 2. 带宽墙。</b> Qwen3-8B 的理想化全模型同步（16&nbsp;GB，BF16）。RDMA 能把传输隐藏在生成窗口内；1&nbsp;Gbps 跨区域链路做不到，因此即使异步 RL 也会停顿。</figcaption>
+  </figure>
+
+  <p>这就是为什么 OpenRLHF、veRL、StreamRL 等先进 RL 系统都面向紧耦合 RDMA 集群。而这种集群恰恰是大多数团队难以获得的：</p>
+
+  <ul>
+    <li><strong>网络溢价。</strong> RDMA 节点比普通以太网节点更贵：某供应商上 16×H100 约为 ~$39/hr，而普通网络约为 ~$31/hr，仅网络就多出 26%。</li>
+    <li><strong>最小预留周期。</strong> 供应商通常要求 24 小时到一周的预留。一个探索性的 48 小时实验，可能变成一周账单，成本最高放大到 3.5×。</li>
+    <li><strong>采购门槛。</strong> 预留大规模 RDMA 资源通常需要销售关系和信用额度，而学术实验室、政府团队和创业公司往往没有这些条件。</li>
+  </ul>
+
+  <p>与此同时，从两个云上按需拼接同样 16 张 GPU，成本约为 ~$26–27/hr，并且计费更灵活。算力就在那儿，只是藏在 1–10&nbsp;Gbps 跨区域链路之后。阻挡这些按需算力进入真实 RL 训练的唯一问题，就是权重同步墙。因此我们提出问题：<strong>能否在跨区域网络上获得 RDMA 级别的 RL 吞吐？</strong></p>
+
+  <!-- ===================== INSIGHT ===================== -->
+  <h2 id="insight"><span class="kicker">关键洞察</span>RL 每步几乎不改变模型</h2>
+
+  <p>面对带宽问题，常见做法是堆更多带宽。我们反过来看：不要把 RL 循环当作黑盒，而是打开它，看清楚到底在传什么。答案很惊人。预训练中，梯度下降几乎每步都会推动所有参数；但单步 RL 更新后，绝大多数权重保持<strong>逐 bit 不变</strong>。</p>
+
+  <p>我们测量 element-wise nonzero ratio，也就是连续 checkpoint 之间发生变化的标量参数比例。结果显示，每步真正改变的元素只有约 <strong>1%</strong>（图 3）。其余 99% 逐 bit 相同。这种更新是细粒度稀疏的：几乎每个张量都会有<em>一些</em>变化，但每个张量内部只触及极少数离散元素。</p>
+
+  <figure class="bleed">
+    <div class="figbox">
+      <svg viewBox="0 0 900 320" role="img" aria-label="左侧：权重网格中约 1% 的格子被高亮。右侧：不同模型家族的非零更新比例柱状图，范围为 0.9% 到 2.6%。">
+        <!-- LEFT: weight grid -->
+        <text x="24" y="32" class="f-text" font-size="16" font-weight="700">8B 模型的一步 RL 更新</text>
+        <text x="24" y="52" class="f-mut" font-size="13">每个格子 = 一段权重 · 高亮 = 发生变化</text>
+        <!-- grid 18 cols x 10 rows, cell 13, gap 2 -> 15 px step. start 28,72 -->
+        <g class="f-panel" style="stroke:var(--fig-line)" stroke-width="0.5">
+          <!-- background faint cells generated -->
+        </g>
+        <g id="grid"></g>
+        <script type="application/json" id="gridmeta">{"cols":24,"rows":15,"x":28,"y":70,"step":11,"size":9,"hot":[53,162,219,308]}</script>
+        <text x="28" y="252" class="delta" font-size="14" font-weight="700">≈ 1% 变化</text>
+        <text x="120" y="252" class="f-mut" font-size="13">全量广播会无意义地重传其余 99%</text>
+
+        <!-- RIGHT: nonzero ratio bars -->
+        <text x="470" y="32" class="f-text" font-size="16" font-weight="700">每步非零更新比例</text>
+        <text x="470" y="52" class="f-mut" font-size="13">跨模型家族保持一致（按元素统计）</text>
+        <!-- axis: y 0..3% over y=240..90 (150px) -> 50px per % ; x baseline 240 -->
+        <line x1="470" y1="240" x2="880" y2="240" class="f-line" stroke-width="1"/>
+        <!-- gridlines 1,2,3 % -->
+        <line x1="470" y1="190" x2="880" y2="190" class="f-grid" stroke-width="1"/><text x="455" y="194" class="f-mut" font-size="11" text-anchor="end">1%</text>
+        <line x1="470" y1="140" x2="880" y2="140" class="f-grid" stroke-width="1"/><text x="455" y="144" class="f-mut" font-size="11" text-anchor="end">2%</text>
+        <line x1="470" y1="90"  x2="880" y2="90"  class="f-grid" stroke-width="1"/><text x="455" y="94"  class="f-mut" font-size="11" text-anchor="end">3%</text>
+        <!-- bars: width 50, slot ~78; values *50px/% -->
+        <!-- Qwen3-4B 1.12 -> 56 -->
+        <rect x="486" y="184" width="50" height="56" rx="3" class="delta"/><text x="511" y="178" class="f-text" font-size="12" text-anchor="middle" font-weight="700">1.12</text>
+        <!-- Qwen3-8B 0.96 -> 48 -->
+        <rect x="564" y="192" width="50" height="48" rx="3" class="delta"/><text x="589" y="186" class="f-text" font-size="12" text-anchor="middle" font-weight="700">0.96</text>
+        <!-- Llama3-8B 2.56 -> 128 -->
+        <rect x="642" y="112" width="50" height="128" rx="3" class="delta"/><text x="667" y="106" class="f-text" font-size="12" text-anchor="middle" font-weight="700">2.56</text>
+        <!-- GLM4-9B 1.99 -> 99.5 -->
+        <rect x="720" y="140" width="50" height="100" rx="3" class="delta"/><text x="745" y="134" class="f-text" font-size="12" text-anchor="middle" font-weight="700">1.99</text>
+        <!-- Qwen2.5-72B 1.85 -> 92.5 -->
+        <rect x="798" y="148" width="50" height="92" rx="3" class="delta"/><text x="823" y="142" class="f-text" font-size="12" text-anchor="middle" font-weight="700">1.85</text>
+        <!-- x labels -->
+        <text x="511" y="256" class="f-mut" font-size="11" text-anchor="middle">Qwen3-4B</text>
+        <text x="589" y="256" class="f-mut" font-size="11" text-anchor="middle">Qwen3-8B</text>
+        <text x="667" y="256" class="f-mut" font-size="11" text-anchor="middle">Llama3-8B</text>
+        <text x="745" y="256" class="f-mut" font-size="11" text-anchor="middle">GLM4-9B</text>
+        <text x="823" y="256" class="f-mut" font-size="11" text-anchor="middle">Qwen2.5-72B</text>
+        <text x="470" y="296" class="f-mut" font-size="12.5">GRPO (0.96%)、RLOO (0.93%)、OPO (1.06%) 下同样约 1%；800 步内稳定低于 1%。</text>
+      </svg>
+    </div>
+    <figcaption><b>图 3. 1% 洞察。</b> 单步 RL 更新约 99% 稀疏。这一模式跨模型家族、跨 RL 算法（GRPO/RLOO/OPO）成立，并贯穿 800 步训练。它是结构性属性，而不是暂时现象。</figcaption>
+  </figure>
+
+  <p><strong>为什么 RL 如此稀疏？</strong> 第一，RL 后训练通常使用 <code>1e-6</code> 量级的小学习率，比预训练低约两个数量级，因此每一步只是在轻微调整模型。第二，在线 RL 更新具有 in-distribution 特性，近期理论将其与更少遗忘和更小参数移动联系起来。第三，KL 惩罚、梯度裁剪等正则项会进一步限制每一步的移动幅度。这个现象会持续存在：非零更新比例很快降到 1% 以下，并在 800 步内保持稳定。</p>
+
+  <p>BF16 rollout serving 会进一步放大这种稀疏性。Trainer 可能更新 FP32 master weights，但 Actor 接收的是 BF16 checkpoint；低于 BF16 表示间隔的 FP32 小更新会在推理前被舍入掉。因此，SparrowRL 测量并传输 Actor 真正需要的 BF16 inference-side delta。FP16 有更细的尾数精度，但动态范围更窄，在这类 serving 路径中更少使用，因为它增加下溢风险并常常需要 loss scaling。</p>
+
+  <div class="callout"><span class="tag">机会 →</span> 全量权重广播约 99% 的字节都在重传没有变化的权重。改为发送<em>差分</em>，并且<em>无损</em>发送，就不会改变训练动态。</div>
+
+  <!-- ===================== DESIGN ===================== -->
+  <h2 id="design"><span class="kicker">系统</span>SparrowRL 如何工作</h2>
+
+  <p>SparrowRL 将这一观察转化为系统。它复用了 <a href="https://github.com/PrimeIntellect-ai/prime-rl">PRIME-RL</a> 的部分训练和推理代码，包括 PyTorch FSDP2 训练组件和 vLLM 推理组件。实现约为 4.3K 行 Python，并不改变底层 RL 算法。三个机制协同工作（图 4）。</p>
+
+  <figure class="bleed">
+    <div class="figbox paper">
+      <object type="image/svg+xml" data="assets/figures/architecture_zh.svg" style="width:100%;aspect-ratio:516/270;display:block" aria-label="SparrowRL 架构：Trainer Hub 通过 WAN 连接区域 Relay 和 rollout Actor"></object>
+    </div>
+    <figcaption><b>图 4. 架构。</b> Trainer Hub（策略优化器、任务账本、checkpoint store）运行在高速 RDMA 集群上。每个区域选出一个 Actor 作为 <b>Relay</b>，缓存当前版本并在本地扇出 delta，因此每个区域只需要一次跨区域传输，而不是 O(N) 次。步骤：① 下发 prompts · ② 返回 rollouts · ③ 优化 · ④ 编码并存储稀疏 delta · ⑤ Relay 扇出。</figcaption>
+  </figure>
+
+  <h3>1 · 无损稀疏 delta</h3>
+  <p>SparrowRL 不发送临时广播，而是让每一步都生成一个带版本、不可变的 artifact，其中只包含发生变化的元素，并保留<strong>完整精度</strong>。没有量化，也没有丢弃更新；Actor 收到的正是 Trainer 计算出的 bit。把 checkpoint 存储和网络传输统一成一个对象，也让重试变得明确：一个 rollout 要么匹配已验证的版本 hash，要么不匹配。</p>
+  <p>朴素做法会把每个变化表示为 <code>(index, value)</code>，其中 4 字节 index 比 2 字节 value 还重。SparrowRL 分两步降低开销。它先存储排序后 index 之间的<em>差值</em>，再用 <strong>LEB128 变长整数</strong>编码这些差值（图 5）。小 gap 只占 1 字节，少数大 gap 才会扩展到第 2 字节。这样 index 平均从 4 字节降到不到 2 字节，checkpoint 又缩小 30–50%。</p>
+
+  <figure class="bleed">
+    <div class="figbox paper">
+      <object type="image/svg+xml" data="assets/figures/delta_encoding_zh.svg" style="width:100%;aspect-ratio:387/182;display:block" aria-label="Delta checkpoint index 编码：绝对 index 到 delta offset，再到 LEB128 varint 字节，并展示 varint 解码示例"></object>
+    </div>
+    <figcaption><b>图 5. Delta index 编码。</b> 排序后的非零 index 先变成较小的 Δ-offset，再变成 LEB128 varint 字节：offset &lt;128 只占 1 字节，更大的 gap 会延续到第 2 字节（例如 198 → <span class="mono">C6 01</span>）。value 保持完整精度，因此方案是纯无损的。</figcaption>
+  </figure>
+
+  <h3>2 · 流式传输</h3>
+  <p>稀疏 delta 是<em>可分解</em>的，所以 SparrowRL 不必等待整个文件生成。它把每个 delta 切成 segment，并在其余部分仍在提取时就发送第一个 segment，从 trainer 到 relay 再到 actor 形成 cut-through 路径（图 6）。segment 会以 round-robin 方式分布到多个 TCP stream 上。某个 stream 因丢包停顿时，不会阻塞其他 stream，因此 WAN 链路能保持饱和。在我们的美国–加拿大部署中，多流传输把 202&nbsp;MB delta 从 4.71&nbsp;秒降到 2.90&nbsp;秒。关键是，传输与 rollout 生成重叠。Actor 在当前版本上生成时，提前 <strong>stage</strong> 下一版本，并在 batch 间安全点原地 <strong>commit</strong>。rollout 永远不会来自半应用的模型。</p>
+
+  <figure class="bleed">
+    <div class="figbox paper">
+      <object type="image/svg+xml" data="assets/figures/timeline_zh.svg" style="width:100%;aspect-ratio:583/253;display:block" aria-label="流式时间线：逐层提取 delta，在三个并行 TCP stream 间 round-robin 分片，并在安全点切换 rollout 版本"></object>
+    </div>
+    <figcaption><b>图 6. 重叠是一切。</b> Trainer 逐层提取 delta，并将 segment 以 round-robin 方式分配到三个并行 TCP stream 上。同时，Actor 继续在旧策略上生成 rollout。传输完成后，只在安全点切换版本，因此传输成本不会落在关键路径上。</figcaption>
+  </figure>
+
+  <h3>3 · 面向复杂 GPU 池的调度</h3>
+  <p>松耦合 Actor 的速度可能相差 2–3×（H100 vs A100 vs L40），而且链路拥塞、GPU 降频、spot 实例消失都会让差距漂移。SparrowRL 根据<strong>实测吞吐</strong>为每个 Actor 分配任务，并用 tokens/s 的 EMA 更新估计。一个 5,000 tok/s 的 H100 和一个 2,500 tok/s 的 A100 会把 300 个 prompt 按 200/100 分配，并一起完成。一个反馈信号即可吸收 GPU 降频、网络拥塞和资源争用，而不必分别追踪。版本感知 gating 防止陈旧 Actor 污染训练步。<strong>限时 lease</strong> 处理故障：如果某个 Actor 或区域错过 deadline，它的 prompt 会回到池中，由健康 Actor 接管。只有 lease 有效且版本和 checkpoint hash 都匹配时，结果才会被接收。</p>
+
+  <!-- ===================== RESULTS ===================== -->
+  <h2 id="results"><span class="kicker">证据</span>效果是否成立？</h2>
+
+  <p>主要端到端评估使用 Qwen3 4B/8B/14B，Trainer 位于美国 H100，A100 rollout Actor 位于加拿大。真实跨云链路在 ~500&nbsp;Mbps 到 1&nbsp;Gbps 间波动。额外压力测试模拟 0.25–10&nbsp;Gbps 链路，将 Actor 分散到加拿大、日本、荷兰和冰岛，在加拿大–澳大利亚部署中评估 Relay 扇出，并混合 A100/L40 Actor 来测试异构性。基线包括 <b>vanilla cross-DC</b> 全量权重广播、其 <b>multi-stream</b> 变体，以及理想化 800&nbsp;Gbps RDMA 上界 <b>Ideal-SingleDC</b>。每步现在只传 202&nbsp;MB 稀疏 delta，而不是 15.6&nbsp;GB 全量权重。这是 <b>79× 缩减</b>。即使在 0.25&nbsp;Gbps 下，delta 也能在数秒内传完；全量广播需要 566&nbsp;秒。</p>
+
+  <h3>吞吐接近理想上界</h3>
+  <p>如图 7 所示，端到端来看 SparrowRL 几乎追上 RDMA 上界。</p>
+  <figure class="bleed">
+    <div class="figbox">
+      <svg viewBox="0 0 900 300" role="img" aria-label="Qwen3-4B、8B 和 14B 的端到端吞吐分组柱状图（tokens/s）：SparrowRL 几乎匹配理想单数据中心 RDMA 基线。">
+        <text x="26" y="150" transform="rotate(-90 26 150)" text-anchor="middle" class="f-mut" font-size="16" font-weight="700">吞吐（tokens/s）</text>
+        <line x1="120" y1="250" x2="860" y2="250" class="f-line"/>
+        <g class="f-grid"><line x1="120" y1="195.8" x2="860" y2="195.8"/><line x1="120" y1="141.7" x2="860" y2="141.7"/><line x1="120" y1="87.5" x2="860" y2="87.5"/></g>
+        <g class="f-mut" font-size="11" text-anchor="end"><text x="112" y="254">0</text><text x="112" y="199">5k</text><text x="112" y="145">10k</text><text x="112" y="91">15k</text></g>
+        <g font-size="14"><rect x="323" y="19" width="13" height="13" rx="3" class="ideal"/><text x="343" y="30" class="f-mut">理想单 DC RDMA</text><rect x="499" y="19" width="13" height="13" rx="3" class="delta"/><text x="519" y="30" class="f-mut">SparrowRL</text></g>
+        <rect x="182" y="95" width="64" height="155" rx="3" class="ideal"/><text x="214" y="89" class="f-text" font-size="11" text-anchor="middle" font-weight="700">14.3k</text>
+        <rect x="254" y="102" width="64" height="148" rx="3" class="delta"/><text x="286" y="96" class="f-text" font-size="11" text-anchor="middle" font-weight="700">13.7k</text>
+        <text x="250" y="270" class="f-text" font-size="13" text-anchor="middle" font-weight="700">Qwen3-4B</text>
+        <rect x="412" y="71" width="64" height="179" rx="3" class="ideal"/><text x="444" y="65" class="f-text" font-size="11" text-anchor="middle" font-weight="700">16.5k</text>
+        <rect x="484" y="78" width="64" height="172" rx="3" class="delta"/><text x="516" y="72" class="f-text" font-size="11" text-anchor="middle" font-weight="700">15.9k</text>
+        <text x="480" y="270" class="f-text" font-size="13" text-anchor="middle" font-weight="700">Qwen3-8B</text>
+        <rect x="642" y="90" width="64" height="160" rx="3" class="ideal"/><text x="674" y="84" class="f-text" font-size="11" text-anchor="middle" font-weight="700">14.8k</text>
+        <rect x="714" y="98" width="64" height="152" rx="3" class="delta"/><text x="746" y="92" class="f-text" font-size="11" text-anchor="middle" font-weight="700">14.0k</text>
+        <text x="710" y="270" class="f-text" font-size="13" text-anchor="middle" font-weight="700">Qwen3-14B</text>
+        <text x="120" y="292" class="f-mut" font-size="11.5">距离理想值 1.31–8.91%；在相同 WAN 上比全量权重广播高 2.4–9.5×。</text>
+      </svg>
+    </div>
+    <figcaption><b>图 7. 跨模型规模接近理想。</b> Hendrycks MATH、GSM8K 和 DeepScaleR 的几何平均。通过让权重传输离开关键路径，SparrowRL 与理想单 DC RDMA 的差距仅为 <b>1.31–8.91%</b>，并在相同 WAN 上比全量权重广播高 <b>2.4–9.5×</b>。</figcaption>
+  </figure>
+
+  <h3>跨区域扩展</h3>
+  <p>如图 8 所示，随着区域增加，优势会进一步扩大。</p>
+  <figure class="bleed">
+    <div class="figbox">
+      <svg viewBox="0 0 900 300" role="img" aria-label="分组柱状图：从 1 个数据中心扩展到 4 个数据中心时，vanilla cross-DC 基线吞吐从 7137 降到 1219 tokens/s，而 SparrowRL 仍接近 13k。">
+        <text x="26" y="150" transform="rotate(-90 26 150)" text-anchor="middle" class="f-mut" font-size="16" font-weight="700">吞吐（tokens/s）</text>
+        <line x1="120" y1="250" x2="860" y2="250" class="f-line"/>
+        <g class="f-grid"><line x1="120" y1="185" x2="860" y2="185"/><line x1="120" y1="120" x2="860" y2="120"/><line x1="120" y1="55" x2="860" y2="55"/></g>
+        <g class="f-mut" font-size="11" text-anchor="end"><text x="112" y="254">0</text><text x="112" y="189">5k</text><text x="112" y="124">10k</text><text x="112" y="59">15k</text></g>
+        <g font-size="14"><rect x="307" y="19" width="13" height="13" rx="3" class="full"/><text x="327" y="30" class="f-mut">Vanilla cross-DC 基线</text><rect x="515" y="19" width="13" height="13" rx="3" class="delta"/><text x="535" y="30" class="f-mut">SparrowRL</text></g>
+        <rect x="226" y="157.2" width="70" height="92.8" rx="3" class="full"/><text x="261" y="151" class="f-text" font-size="11.5" text-anchor="middle" font-weight="700">7,137</text>
+        <rect x="304" y="73.2" width="70" height="176.8" rx="3" class="delta"/><text x="339" y="67" class="delta" font-size="11.5" text-anchor="middle" font-weight="700">≈13.6k</text>
+        <text x="300" y="270" class="f-text" font-size="13" text-anchor="middle" font-weight="700">1 个数据中心</text>
+        <rect x="566" y="234.2" width="70" height="15.8" rx="3" class="full"/><text x="601" y="228" class="f-text" font-size="11.5" text-anchor="middle" font-weight="700">1,219</text>
+        <rect x="644" y="97.9" width="70" height="152.1" rx="3" class="delta"/><text x="679" y="91" class="delta" font-size="11.5" text-anchor="middle" font-weight="700">≈11.7k</text>
+        <text x="640" y="270" class="f-text" font-size="13" text-anchor="middle" font-weight="700">4 个数据中心</text>
+        <text x="120" y="292" class="f-mut" font-size="11.5">全量权重传输在 4 区域下降 5.86×；SparrowRL 仅下降 13.7%（吞吐高 1.9–9×）。</text>
+      </svg>
+    </div>
+    <figcaption><b>图 8. 地理分散几乎免费。</b> 在 Qwen3-4B 上，全量权重传输受最慢 Actor 限制，因此 4 个区域会让吞吐下降 5.86×（7,137→1,219 tok/s）。SparrowRL 只损失 13.7%。 <span class="f-mut">（Full 端点为实测；SparrowRL 数值来自报告的 −13.7% / 1.9–9× 结果。）</span></figcaption>
+  </figure>
+
+  <p>同一测试平台上的三个小型消融进一步补全了图景：</p>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>机制</th><th>作用</th><th class="num">GSM8K</th><th class="num">DeepScaleR</th></tr></thead>
+    <tbody>
+      <tr><td><b>多流传输</b></td><td>4 个并行 TCP stream（Qwen3-14B）</td><td class="num gain">+12.4%</td><td class="num gain">+16.3%</td></tr>
+      <tr><td><b>Relay 扇出</b></td><td>每个区域一次跨区域 hop（Qwen3-8B）</td><td class="num gain">+4.4%</td><td class="num gain">+13.9%</td></tr>
+      <tr><td><b>异构感知调度</b></td><td>按吞吐比例分配 batch（A100+L40 池）</td><td class="num gain">+35.5%</td><td class="num gain">+26.4%</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>每美元更多 token</h3>
+  <p>如图 9 所示，在相近吞吐下它也更便宜。</p>
+  <figure class="bleed">
+    <div class="figbox">
+      <svg viewBox="0 0 900 280" role="img" aria-label="每美元 token 数：SparrowRL 在 8B 上比预留单数据中心 RDMA 集群高 1.21 倍，在 14B 上高 1.59 倍。">
+        <text x="26" y="148" transform="rotate(-90 26 148)" text-anchor="middle" class="f-mut" font-size="16" font-weight="700">每美元 token 数（M）</text>
+        <!-- y 0..4 over y 240..60 (180px) -> 45px/unit -->
+        <line x1="120" y1="240" x2="860" y2="240" class="f-line"/>
+        <g class="f-grid"><line x1="120" y1="195" x2="860" y2="195"/><line x1="120" y1="150" x2="860" y2="150"/><line x1="120" y1="105" x2="860" y2="105"/><line x1="120" y1="60" x2="860" y2="60"/></g>
+        <g class="f-mut" font-size="11" text-anchor="end"><text x="112" y="244">0</text><text x="112" y="199">1</text><text x="112" y="154">2</text><text x="112" y="109">3</text><text x="112" y="64">4</text></g>
+        <!-- 8B group x~320 -->
+        <text x="330" y="275" class="f-text" font-size="13" font-weight="700" text-anchor="middle">Qwen3-8B</text>
+        <!-- SingleDC 2.99 -> h=134.6 -> y=105.4 -->
+        <rect x="256" y="105" width="62" height="135" rx="3" class="full"/><text x="287" y="99" class="f-text" font-size="11.5" text-anchor="middle" font-weight="700">2.99</text><text x="287" y="256" class="f-mut" font-size="10.5" text-anchor="middle">$19.92/hr</text>
+        <!-- Sparrow 3.60 -> h=162 -> y=78 -->
+        <rect x="342" y="78" width="62" height="162" rx="3" class="delta"/><text x="373" y="72" class="f-text" font-size="11.5" text-anchor="middle" font-weight="700">3.60</text><text x="373" y="256" class="f-mut" font-size="10.5" text-anchor="middle">$15.88/hr</text>
+        <text x="330" y="44" class="ideal" font-size="13" font-weight="800" text-anchor="middle">1.21×</text>
+        <!-- 14B group x~640 -->
+        <text x="650" y="275" class="f-text" font-size="13" font-weight="700" text-anchor="middle">Qwen3-14B</text>
+        <!-- SingleDC 1.33 -> h=59.9 -> y=180.1 -->
+        <rect x="576" y="180" width="62" height="60" rx="3" class="full"/><text x="607" y="174" class="f-text" font-size="11.5" text-anchor="middle" font-weight="700">1.33</text><text x="607" y="256" class="f-mut" font-size="10.5" text-anchor="middle">$39.84/hr</text>
+        <!-- Sparrow 2.12 -> h=95.4 -> y=144.6 -->
+        <rect x="662" y="145" width="62" height="95" rx="3" class="delta"/><text x="693" y="139" class="f-text" font-size="11.5" text-anchor="middle" font-weight="700">2.12</text><text x="693" y="256" class="f-mut" font-size="10.5" text-anchor="middle">$23.82/hr</text>
+        <text x="650" y="120" class="ideal" font-size="13" font-weight="800" text-anchor="middle">1.59×</text>
+        <!-- legend -->
+        <g font-size="14"><rect x="234" y="19" width="13" height="13" rx="3" class="full"/><text x="254" y="30" class="f-mut">预留单 DC RDMA</text><rect x="430" y="19" width="13" height="13" rx="3" class="delta"/><text x="450" y="30" class="f-mut">SparrowRL（跨云按需）</text></g>
+      </svg>
+    </div>
+    <figcaption><b>图 9. 相近吞吐下更便宜。</b> 相对理想化的预留 RDMA 集群，SparrowRL 每美元 token 数提高 1.21×（8B）到 1.59×（14B）。它使用跨云按需 GPU，而且还没有计入 RDMA 最小预留周期带来的额外成本。</figcaption>
+  </figure>
+
+  <!-- ===================== IMPACT ===================== -->
+  <h3>从设计上无损</h3>
+  <p>SparrowRL 发送的是无损 delta，而不是压缩梯度或量化近似。在相同的一步异步调度下，Actor 收到的策略更新与全量权重刷新会传递的更新一致。系统改变的是字节如何移动，而不是 RL 目标、rollout 策略语义或优化器更新。</p>
+
+  <p>这就是论文将 SparrowRL 定位为“不牺牲准确率而提升吞吐”的原因。稀疏 delta 传输保留非零值的完整精度，并且只在安全的版本切换点激活更新。你可以在普通链路上获得接近高带宽网络的吞吐，而不把模型质量变成压缩权衡。</p>
+
+  <hr>
+
+  <!-- ===================== ACKNOWLEDGMENTS ===================== -->
+  <h2 id="ack">致谢</h2>
+  <ul>
+    <li>复用了 <a href="https://github.com/PrimeIntellect-ai/prime-rl">PRIME-RL</a> 的部分训练和推理代码，包括 PyTorch FSDP2 训练组件和 vLLM 推理组件。</li>
+    <li>基准测试覆盖 Hendrycks MATH、GSM8K 和 DeepScaleR。</li>
+  </ul>
+
+  <hr>
+
+  <!-- ===================== CITE ===================== -->
+  <h2 id="cite">阅读更多与引用</h2>
+  <div class="meta-row" style="margin-bottom:6px">
+    <a class="btn primary" href="https://arxiv.org/abs/2602.11456">arXiv 论文</a>
+    <a class="btn" href="https://arxiv.org/html/2602.11456v1">HTML 版本</a>
+    <a class="btn" href="https://github.com/sparrow-rl-project/sparrow-rl">GitHub 仓库</a>
+  </div>
+  <div class="cite">
+<pre>@article{sparrowrl2026,
+  title   = {RL over Commodity Networks: Overcoming the
+             Bandwidth Barrier with Lossless Sparse Deltas},
+  author  = {Ruan, Chaoyi and Luo, Geng and Wan, Xinyi and Zhao, Long
+             and Wang, Qinghe and Zhu, Jiaan and Xu, Duling and Xu, Guanbin
+             and Wei, Dehui and Liu, Xiang and Li, Cheng and Sun, Haifeng
+             and Miao, Congcong and Li, Jialin},
+  journal = {arXiv preprint arXiv:2602.11456},
+  year    = {2026}
+}</pre>
+  </div>
+
+</article>
+</div>
+
+<footer>
+  <div class="wrap">
+    <p>新加坡国立大学 · 安徽大学 · 中国科学技术大学 · 中国人民大学</p>
+    <div class="foot-links">
+      <a href="https://arxiv.org/abs/2602.11456">论文</a>
+      <a href="https://github.com/sparrow-rl-project/sparrow-rl">代码</a>
+      <a href="#top">返回顶部 ↑</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  // theme: respect saved choice, else system
+  var root = document.documentElement;
+  var saved = null;
+  try { saved = localStorage.getItem('sparrow-theme'); } catch (e) {}
+  if (saved) root.setAttribute('data-theme', saved);
+  var btn = document.getElementById('themeBtn');
+  btn.addEventListener('click', function () {
+    var cur = root.getAttribute('data-theme');
+    if (!cur) cur = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    var next = cur === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('sparrow-theme', next); } catch (e) {}
+  });
+
+  // build the sparsity grid from metadata (keeps SVG markup compact)
+  var meta = JSON.parse(document.getElementById('gridmeta').textContent);
+  var g = document.getElementById('grid');
+  var ns = 'http://www.w3.org/2000/svg';
+  var hot = {}; meta.hot.forEach(function (i) { hot[i] = 1; });
+  for (var r = 0; r < meta.rows; r++) {
+    for (var c = 0; c < meta.cols; c++) {
+      var i = r * meta.cols + c;
+      var rect = document.createElementNS(ns, 'rect');
+      rect.setAttribute('x', meta.x + c * meta.step);
+      rect.setAttribute('y', meta.y + r * meta.step);
+      rect.setAttribute('width', meta.size);
+      rect.setAttribute('height', meta.size);
+      rect.setAttribute('rx', '2');
+      rect.setAttribute('class', hot[i] ? 'delta' : 'f-cell');
+      g.appendChild(rect);
+    }
+  }
+})();
+</script>
+
+</body>
+</html>
