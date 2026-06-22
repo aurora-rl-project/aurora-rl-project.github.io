@@ -47,24 +47,17 @@
   <div class="tldr">
     <div class="stat"><div class="big">79×</div><div class="lbl">smaller weight sync per step (15.6&nbsp;GB → 202&nbsp;MB, Qwen3-8B)</div></div>
     <div class="stat"><div class="big">2.4–9.5×</div><div class="lbl">higher throughput than full-weight broadcast over WAN</div></div>
-    <div class="stat"><div class="big">≤8.91%</div><div class="lbl">from an ideal single-datacenter RDMA baseline</div></div>
+    <div class="stat"><div class="big">≤8.91%</div><div class="lbl">throughput gap from an ideal single-DC RDMA baseline</div></div>
     <div class="stat"><div class="big">1.21–1.59×</div><div class="lbl">more tokens per dollar than reserved RDMA clusters</div></div>
   </div>
 
-  <p class="lede">Reinforcement learning is how today's strongest reasoning models are built. But the systems that run it quietly assume something most teams don't have: a rack of GPUs stitched together with hundred-gigabit RDMA. SparrowRL removes that assumption — and gets nearly the same speed over the kind of network you can rent by the hour.</p>
+  <p class="lede">Reinforcement learning is how today's strongest reasoning models are built. But the systems that run it quietly assume something most teams don't have: a rack of GPUs stitched together with hundred-gigabit RDMA. SparrowRL removes that assumption — and gets nearly the same speed over the kind of network you can rent on demand.</p>
 
   <!-- ===================== WHO / DEMOCRATIZE ===================== -->
   <h2 id="who"><span class="kicker">Who it's for</span>Democratizing RL training</h2>
-  <p>For the last few years, RL post-training — the step that turns a capable base model into a strong reasoner — has effectively belonged to whoever could reserve a hundred-gigabit RDMA supercluster. The strange part: the GPUs themselves are no longer scarce — you can rent H100s and A100s by the hour from a dozen providers, across a dozen regions. What you <em>can't</em> cheaply rent is the tightly-coupled fabric that fuses them into one machine, and without it the weight-sync wall (next section) puts RL training out of reach. SparrowRL is about removing that last barrier — so serious RL post-training runs on the cheap, loosely-connected GPUs almost anyone can already get.</p>
+  <p>For the last few years, RL post-training — the step that turns a capable base model into a strong reasoner — has effectively belonged to whoever could reserve a hundred-gigabit RDMA supercluster. The strange part: the GPUs themselves are no longer scarce — you can rent H100s and A100s by the hour from a dozen providers, across a dozen regions. What you <em>can't</em> cheaply rent is the tightly-coupled fabric that fuses them into one cluster — and without that fabric, the weight-sync wall (next section) puts RL training out of reach. SparrowRL is about removing that last barrier — so serious RL post-training runs on the cheap, loosely-connected GPUs almost anyone can already get.</p>
   <p><strong>For academic labs and small teams</strong>, that turns "we can't get a reserved RDMA cluster" into a non-issue: stitch together on-demand GPUs from whatever clouds and regions are cheap and available, and run real large-model RL over the cross-region links between them — at near-RDMA throughput and a better price.</p>
-  <p><strong>For industry</strong>, the same trick attacks the network bottleneck inside disaggregated deployments: dedicate high-bandwidth GPUs to training while using cheaper, loosely-connected accelerators for rollout generation, without the WAN tax that normally makes that split impractical.</p>
-
-  <p>RL post-training follows a simple loop: a <strong>Trainer</strong> updates the policy, then broadcasts the new weights to a fleet of <strong>Rollout Actors</strong> that generate samples and send them back. The catch is that broadcast. Because RL refreshes the <em>entire</em> model every single step, the weight transfer sits squarely on the critical path — and it scales with model size. On a datacenter RDMA fabric this is invisible. On a cross-region network, it is the whole story.</p>
-
-  <!-- ===================== PROBLEM ===================== -->
-  <h2 id="problem"><span class="kicker">The wall</span>Why RL needs a supercomputer</h2>
-
-  <p>Consider an 8B model. In bf16 that's ~16&nbsp;GB of weights that must reach <em>every</em> actor, every step. On a 100&nbsp;Gbps RDMA link the sync takes about <strong>1.3&nbsp;seconds</strong> — comfortably hidden inside the ~45-second window the actors spend generating. Move the same job to a 1&nbsp;Gbps cross-cloud link and that sync balloons to <strong>128&nbsp;seconds</strong>, dwarfing generation entirely. Even one-step asynchronous pipelining can't hide a transfer that's longer than the work it's supposed to overlap with, and GPU utilization collapses into the single digits.</p>
+  <p><strong>For industry</strong>, disaggregated RL — splitting training and rollout across separate, specialized GPU pools rather than one homogeneous cluster — is becoming the norm at scale. The same trick attacks the network bottleneck inside those deployments: dedicate high-bandwidth GPUs to training while using cheaper, loosely-connected accelerators for rollout generation, without the WAN tax that normally makes that split impractical.</p>
 
   <figure class="bleed">
     <div class="figbox paper">
@@ -72,6 +65,13 @@
     </div>
     <figcaption><b>Two ways to run RL.</b> <b>(a)</b> Industrial centralized training — Trainer and Actor nodes fused by a 100–800&nbsp;Gbps RDMA fabric in a private, reserved cluster: fast, but high CapEx/OpEx. <b>(b)</b> What SparrowRL targets — a lab's local-GPU Trainer driving rollout Actors scattered across datacenters over ordinary 1–10&nbsp;Gbps cross-region WAN: low-cost and accessible, but bandwidth-bottlenecked.</figcaption>
   </figure>
+
+  <p>RL post-training follows a simple loop: a <strong>Trainer</strong> updates the policy, then broadcasts the new weights to a fleet of <strong>Rollout Actors</strong> that generate samples and send them back. The catch is that broadcast. Because RL refreshes the <em>entire</em> model every single step, the weight transfer sits squarely on the critical path — and it scales with model size. On a datacenter RDMA fabric this is invisible. On a cross-region network, it is the whole story.</p>
+
+  <!-- ===================== PROBLEM ===================== -->
+  <h2 id="problem"><span class="kicker">The wall</span>Why RL needs a supercomputer</h2>
+
+  <p>Consider an 8B model. In BF16 that's ~16&nbsp;GB of weights that must reach <em>every</em> actor, every step. On a 100&nbsp;Gbps RDMA link the sync takes about <strong>1.3&nbsp;seconds</strong> — comfortably hidden inside the ~45-second window the actors spend generating. Move the same job to a 1&nbsp;Gbps cross-cloud link and that sync balloons to <strong>128&nbsp;seconds</strong>, dwarfing generation entirely. Even one-step asynchronous pipelining can't hide a transfer that's longer than the work it's supposed to overlap with, and GPU utilization collapses into the single digits.</p>
 
   <figure class="bleed">
     <div class="figbox">
@@ -96,7 +96,7 @@
         <text x="40" y="183" class="f-mut" font-size="12">1&nbsp;Gbps</text>
       </svg>
     </div>
-    <figcaption><b>The bandwidth wall.</b> Idealized full-model sync for Qwen3-8B (16&nbsp;GB, fp16). RDMA hides the transfer inside the generation window; a 1&nbsp;Gbps cross-region link does not, so even asynchronous RL stalls.</figcaption>
+    <figcaption><b>The bandwidth wall.</b> Idealized full-model sync for Qwen3-8B (16&nbsp;GB, BF16). RDMA hides the transfer inside the generation window; a 1&nbsp;Gbps cross-region link does not, so even asynchronous RL stalls.</figcaption>
   </figure>
 
   <p>This is why state-of-the-art RL systems — OpenRLHF, veRL, StreamRL — are built for tightly-coupled RDMA clusters. And those clusters are exactly what most of the field can't easily get:</p>
@@ -114,7 +114,7 @@
 
   <p>The usual response to a bandwidth problem is to throw more bandwidth at it. We took the opposite view: stop treating the RL loop as a black box, open it up, and look at <em>what</em> is actually being sent. The answer is striking. Unlike pretraining — where gradient descent nudges nearly every parameter every step — a single RL update leaves the overwhelming majority of weights <strong>bit-for-bit unchanged</strong>.</p>
 
-  <p>Measuring the element-wise nonzero ratio (the fraction of scalar parameters that differ between consecutive checkpoints), only about <strong>1% of elements move per step</strong>. The update is fine-grained-sparse: almost every tensor sees <em>some</em> change, but within each tensor only a tiny scatter of elements is touched.</p>
+  <p>Measuring the element-wise nonzero ratio (the fraction of scalar parameters that differ between consecutive checkpoints), only about <strong>1% of elements actually change value per step</strong> — the other 99% are bit-for-bit identical. The update is fine-grained-sparse: almost every tensor sees <em>some</em> change, but within each tensor only a tiny scatter of elements is touched.</p>
 
   <figure class="bleed">
     <div class="figbox">
@@ -163,7 +163,7 @@
     <figcaption><b>The 1% insight.</b> A single RL update is ~99% sparse. The pattern holds across model families, across RL algorithms (GRPO/RLOO/OPO), and throughout 800 steps of training — it's a structural property, not a transient artifact.</figcaption>
   </figure>
 
-  <p>Why is RL so sparse? Three forces line up. Post-training uses learning rates around <code>1e-6</code> — two orders of magnitude below pretraining — to refine behavior without overwriting knowledge. RL's updates are <em>in-distribution</em>, which recent theory shows resists forgetting and naturally induces smaller parameter changes than supervised fine-tuning. And regularizers like KL penalties and gradient clipping actively bound how far each step can move. The result is durable: the sparsity appears immediately and stays put.</p>
+  <p>Why is RL so sparse? <strong>First</strong>, post-training uses learning rates around <code>1e-6</code> — two orders of magnitude below pretraining — so each step nudges weights only slightly, refining behavior without overwriting knowledge. <strong>Second</strong>, RL's updates are <em>in-distribution</em>, which recent theory shows resists forgetting and induces smaller parameter changes than supervised fine-tuning, while regularizers like KL penalties and gradient clipping actively bound how far each step can move. <strong>Lastly — and decisively — the precision the actors run in erases the rest.</strong> Rollout actors never load the trainer's FP32 master weights; they load <strong>BF16</strong> checkpoints, whose resolution near a weight of size |W| is only about |W|/128. Most one-step updates land in the 10⁻⁷–10⁻⁶ range — well <em>below</em> that spacing at the typical weight scale of 10⁻³–10⁻¹ — so when two consecutive checkpoints are rounded to BF16 and differenced, the overwhelming majority of updates collapse to exactly zero. Of the parameters that <em>did</em> change in FP32, only <strong>1.27%</strong> survive into the BF16 delta the actor actually sees. The sparsity isn't just that RL updates are small — it's that they're small enough to vanish into the precision the actors already use.</p>
 
   <div class="callout"><span class="tag">The opportunity →</span> A full-weight broadcast spends ~99% of its bytes re-transmitting weights that didn't change. Send the <em>difference</em> instead — and send it <em>losslessly</em>, so training dynamics are untouched.</div>
 
