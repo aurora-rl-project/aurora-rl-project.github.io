@@ -172,6 +172,9 @@ article a:hover { border-bottom-color: var(--link); }
 article strong { font-weight: 700; }
 article ul, article ol { padding-left: 22px; }
 article li { margin: 7px 0; }
+article p, article li, figcaption, .subtitle {
+  text-wrap: pretty;
+}
 code, .mono { font-family: var(--mono); font-size: .9em; }
 p code, li code {
   background: var(--bg-soft); border: 1px solid var(--border);

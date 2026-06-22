@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SparrowRL — 跨区域强化学习</title>
-<meta name="description" content="SparrowRL 让大模型 RL 能在灵活租用的跨云 GPU 上运行，即使只有普通 1–10 Gbps 链路。它只传输每步真正变化的约 1% 权重，并以无损方式接近 RDMA 集群速度。">
+<meta name="description" content="SparrowRL 让大模型 RL 能在灵活租用的跨云 GPU 上运行，即使只有普通 1–10 Gbps 链路。它只发送每步真正变化的约 1% 权重对应的无损稀疏 delta，接近 RDMA 集群速度。">
 <meta property="og:type" content="article">
 <meta property="og:title" content="跨区域强化学习">
 <meta property="og:description" content="利用 RL 更新约 1% 稀疏性，SparrowRL 将每步权重同步缩小 79 倍，使跨区域 RL 快 2.4–9.5 倍，并将吞吐差距缩小到理想 RDMA 集群的 8.91% 以内。">
@@ -35,7 +35,7 @@
   <div class="wrap">
     <span class="eyebrow">机器学习系统 · 强化学习</span>
     <h1 class="title">跨区域强化学习</h1>
-    <p class="subtitle">SparrowRL 让大模型 RL 能在灵活租用的跨云 GPU 上运行，即使这些 GPU 只通过普通 1–10&nbsp;Gbps 链路连接。它只传输每步真正变化的约&nbsp;1% 权重，并以无损方式接近 RDMA 集群吞吐。</p>
+    <p class="subtitle">SparrowRL 让大模型 RL 能在灵活租用的跨云 GPU 上运行，即使这些 GPU 只通过普通 1–10&nbsp;Gbps 链路连接。它只发送每步真正变化的约&nbsp;1% 权重对应的无损稀疏 delta，接近 RDMA 集群吞吐。</p>
     <p class="byline"><span class="names">Sparrow-RL 团队</span> · 2026 年 6 月 · 约 8 分钟阅读</p>
   </div>
 </header>
@@ -51,14 +51,14 @@
     <div class="stat"><div class="big">1.21–1.59×</div><div class="lbl">相对预留 RDMA 集群的 token/$ 提升</div></div>
   </div>
 
-  <p class="lede">强化学习正在塑造今天最强的推理模型。但运行这些训练的系统，默认假设团队拥有一整排通过百 Gbps RDMA 连接的 GPU。大多数团队并没有这种条件。SparrowRL 去掉这个假设，让按需租用的普通网络也能接近专用 RDMA 集群的速度。</p>
+  <p class="lede">强化学习正在塑造今天最强的推理模型。但运行这些训练的系统，默认假设团队拥有一整排通过百 Gbps RDMA 连接的 GPU。大多数团队并没有这种条件。SparrowRL 去掉这个假设，让跨供应商、跨区域灵活租用的 GPU 容量也能接近专用 RDMA 集群的速度。</p>
 
   <!-- ===================== WHO / MOTIVATION ===================== -->
   <h2 id="who"><span class="kicker">面向谁</span>为什么跨区域 RL 重要</h2>
   <p>过去几年，RL 后训练几乎只属于能预留百 Gbps RDMA 超级集群的团队。这一步能把有能力的基础模型变成强推理模型。单个 GPU 往往可以跨供应商、跨区域灵活租用。真正难以按需获得的是把它们连成一个集群的高速互联。没有这种网络，权重同步墙就会把 RL 训练挡在门外。SparrowRL 移除这个障碍，让严肃的 RL 后训练可以跑在灵活、松耦合的 GPU 上。</p>
-  <p>因此，跨区域 RL 不只是部署技巧。它关乎成本和可及性：我们能否让 RL 后训练足够便宜、足够灵活、足够可靠，让更广泛的研究社区都能参与？如果答案仍然依赖预留 RDMA 集群，大多数团队都会被排除在外。如果普通 GPU 可以被拼接起来，更多团队就能真正尝试 RL。</p>
+  <p>因此，跨区域 RL 不只是部署技巧。它关乎成本和可及性：我们能否让 RL 后训练足够便宜、足够灵活、足够可靠，让更广泛的研究社区都能参与？如果答案仍然依赖预留 RDMA 集群，大多数团队都会被排除在外。如果普通 GPU 可以被拼接起来，RL 就会成为更多团队可以实际使用的工具。</p>
   <p><strong>对学术实验室和小团队</strong>, SparrowRL 把采购壁垒变成系统问题。团队不必先建立供应商关系、预留固定的 RDMA GPU 集群，也不必在实验尚未验证前就支付长周期配额。它们可以把真正能拿到的 GPU 组装起来：本地机器、按需云实例、合作机构的空闲算力。先小规模启动，GPU 出现时再加入，实验结束后立即停止。SparrowRL 让这种拼接式资源也能支撑严肃的 RL 后训练：基础设施更便宜，调度更灵活，也不需要私有超级集群。</p>
-  <p><strong>对大规模部署</strong>，解耦式 RL 正变得越来越重要，原因很实际：Trainer 和 rollout 池并不需要同一种硬件。策略优化主要受密集训练计算主导，更适合放在互联紧密的高端 GPU 集群上。Rollout 解码常常受显存带宽和容量限制，因此可以利用更便宜、更异构的加速器。大型供应商和实验室本来就有分散在不同区域、云和硬件代际上的 GPU。机会在于把这组碎片化资源变成一个 RL 系统。阻塞点是策略刷新。全量权重同步会让远端 rollout 容量很难保持最新，也很难经济地接入训练循环。SparrowRL 降低这条链路的网络开销：Trainer 留在互联条件最好的集群上，rollout 容量则从任何有 GPU 的地方拉起。稀疏 delta、Relay 扇出和版本感知调度，让系统真正利用全球 GPU 池，而不是让远端资源困在慢链路之后。</p>
+  <p><strong>对大规模部署</strong>，解耦式 RL 正变得越来越重要，原因很实际：Trainer 和 rollout 池并不需要同一种硬件。策略优化主要受密集训练计算主导，更适合放在互联紧密的高端 GPU 集群上。Rollout 解码常常受显存带宽和容量限制，因此可以利用更便宜、更异构的加速器。大型供应商和实验室本来就有分散在不同区域、云和硬件代际上的 GPU。机会在于把这组碎片化资源变成一个 RL 系统，但阻塞点是策略刷新：全量权重同步会让远端 rollout 容量很难保持最新，也很难经济地接入训练循环。SparrowRL 降低这条链路的网络开销：Trainer 留在互联条件最好的集群上，rollout 容量则从任何有 GPU 的地方拉起。稀疏 delta、Relay 扇出和版本感知调度，让系统真正利用全球 GPU 池，而不是让远端资源困在慢速跨区域链路之后。</p>
 
   <p>图 1 对比了两种运行模式：一边是预留 RDMA 超级集群，另一边是分散在多个区域的按需 GPU。</p>
 
@@ -110,7 +110,7 @@
     <li><strong>采购门槛。</strong> 预留大规模 RDMA 资源通常需要销售关系和信用额度，而学术实验室、政府团队和创业公司往往没有这些条件。</li>
   </ul>
 
-  <p>与此同时，从两个云上按需拼接同样 16 张 GPU，成本约为 ~$26–27/hr，并且计费更灵活。算力就在那儿，只是藏在 1–10&nbsp;Gbps 跨区域链路之后。阻挡这些按需算力进入真实 RL 训练的唯一问题，就是权重同步墙。因此我们提出问题：<strong>能否在跨区域网络上获得 RDMA 级别的 RL 吞吐？</strong></p>
+  <p>与此同时，从两个云上按需拼接同样 16 张 GPU，成本约为 ~$26–27/hr，并且计费更灵活。算力就在那儿，只是藏在 1–10&nbsp;Gbps 跨区域链路之后。阻挡这些按需算力进入真实 RL 训练的唯一问题，就是权重同步墙。因此我们提出问题：<strong>普通跨区域网络能否提供 RDMA 级别的 RL 吞吐？</strong></p>
 
   <!-- ===================== INSIGHT ===================== -->
   <h2 id="insight"><span class="kicker">关键洞察</span>RL 每步几乎不改变模型</h2>
@@ -170,7 +170,7 @@
 
   <p>BF16 rollout serving 会进一步放大这种稀疏性。Trainer 可能更新 FP32 master weights，但 Actor 接收的是 BF16 checkpoint；低于 BF16 表示间隔的 FP32 小更新会在推理前被舍入掉。因此，SparrowRL 测量并传输 Actor 真正需要的 BF16 inference-side delta。FP16 有更细的尾数精度，但动态范围更窄，在这类 serving 路径中更少使用，因为它增加下溢风险并常常需要 loss scaling。</p>
 
-  <div class="callout"><span class="tag">机会 →</span> 全量权重广播约 99% 的字节都在重传没有变化的权重。改为发送<em>差分</em>，并且<em>无损</em>发送，就不会改变训练动态。</div>
+  <div class="callout"><span class="tag">机会 →</span> 全量权重广播约 99% 的字节都在重传没有变化的权重。改为发送<em>无损差分</em>，就不会改变训练动态。</div>
 
   <!-- ===================== DESIGN ===================== -->
   <h2 id="design"><span class="kicker">系统</span>SparrowRL 如何工作</h2>
@@ -185,14 +185,14 @@
   </figure>
 
   <h3>1 · 无损稀疏 delta</h3>
-  <p>SparrowRL 不发送临时广播，而是让每一步都生成一个带版本、不可变的 artifact，其中只包含发生变化的元素，并保留<strong>完整精度</strong>。没有量化，也没有丢弃更新；Actor 收到的正是 Trainer 计算出的 bit。把 checkpoint 存储和网络传输统一成一个对象，也让重试变得明确：一个 rollout 要么匹配已验证的版本 hash，要么不匹配。</p>
+  <p>SparrowRL 不发送临时广播，而是让每一步都生成一个带版本、不可变的 artifact，其中只包含发生变化的元素，并保留<strong>完整精度</strong>。没有量化，也没有丢弃更新；Actor 收到的正是 Trainer 计算出的 bit。把 checkpoint 存储和网络传输统一成一个对象，也让重试变得明确：一个 rollout 要么匹配已验证的版本 hash，要么结果会被拒绝。</p>
   <p>朴素做法会把每个变化表示为 <code>(index, value)</code>，其中 4 字节 index 比 2 字节 value 还重。SparrowRL 分两步降低开销。它先存储排序后 index 之间的<em>差值</em>，再用 <strong>LEB128 变长整数</strong>编码这些差值（图 5）。小 gap 只占 1 字节，少数大 gap 才会扩展到第 2 字节。这样 index 平均从 4 字节降到不到 2 字节，checkpoint 又缩小 30–50%。</p>
 
   <figure class="bleed">
     <div class="figbox paper">
       <object type="image/svg+xml" data="assets/figures/delta_encoding_zh.svg" style="width:100%;aspect-ratio:387/182;display:block" aria-label="Delta checkpoint index 编码：绝对 index 到 delta offset，再到 LEB128 varint 字节，并展示 varint 解码示例"></object>
     </div>
-    <figcaption><b>图 5. Delta index 编码。</b> 排序后的非零 index 先变成较小的 Δ-offset，再变成 LEB128 varint 字节：offset &lt;128 只占 1 字节，更大的 gap 会延续到第 2 字节（例如 198 → <span class="mono">C6 01</span>）。value 保持完整精度，因此方案是纯无损的。</figcaption>
+    <figcaption><b>图 5. Delta index 编码。</b> 排序后的非零 index 先变成较小的 Δ-offset，再变成 LEB128 varint 字节：offset &lt;128 只占 1 字节，更大的 gap 会延续到第 2 字节（例如 198 → <span class="mono">C6 01</span>）。value 保持完整精度，使整个方案端到端无损。</figcaption>
   </figure>
 
   <h3>2 · 流式传输</h3>
@@ -211,7 +211,7 @@
   <!-- ===================== RESULTS ===================== -->
   <h2 id="results"><span class="kicker">证据</span>效果是否成立？</h2>
 
-  <p>主要端到端评估使用 Qwen3 4B/8B/14B，Trainer 位于美国 H100，A100 rollout Actor 位于加拿大。真实跨云链路在 ~500&nbsp;Mbps 到 1&nbsp;Gbps 间波动。额外压力测试模拟 0.25–10&nbsp;Gbps 链路，将 Actor 分散到加拿大、日本、荷兰和冰岛，在加拿大–澳大利亚部署中评估 Relay 扇出，并混合 A100/L40 Actor 来测试异构性。基线包括 <b>vanilla cross-DC</b> 全量权重广播、其 <b>multi-stream</b> 变体，以及理想化 800&nbsp;Gbps RDMA 上界 <b>Ideal-SingleDC</b>。每步现在只传 202&nbsp;MB 稀疏 delta，而不是 15.6&nbsp;GB 全量权重。这是 <b>79× 缩减</b>。即使在 0.25&nbsp;Gbps 下，delta 也能在数秒内传完；全量广播需要 566&nbsp;秒。</p>
+  <p>主要端到端评估使用 Qwen3 4B/8B/14B，Trainer 位于美国 H100，A100 rollout Actor 位于加拿大。真实跨云链路在 ~500&nbsp;Mbps 到 1&nbsp;Gbps 间波动。额外压力测试模拟 0.25–10&nbsp;Gbps 链路，将 Actor 分散到加拿大、日本、荷兰和冰岛，在加拿大–澳大利亚部署中评估 Relay 扇出，并混合 A100/L40 Actor 来测试异构性。基线包括 <b>vanilla cross-DC</b> 全量权重广播、其 <b>multi-stream</b> 变体，以及理想化 800&nbsp;Gbps RDMA 上界 <b>Ideal-SingleDC</b>。每步现在只传 202&nbsp;MB 稀疏 delta，而不是 15.6&nbsp;GB 全量权重，缩减 <b>79×</b>。即使在 0.25&nbsp;Gbps 下，delta 也能在数秒内传完；全量广播需要 566&nbsp;秒。</p>
 
   <h3>吞吐接近理想上界</h3>
   <p>如图 7 所示，端到端来看 SparrowRL 几乎追上 RDMA 上界。</p>
@@ -300,7 +300,7 @@
         <g font-size="14"><rect x="234" y="19" width="13" height="13" rx="3" class="full"/><text x="254" y="30" class="f-mut">预留单 DC RDMA</text><rect x="430" y="19" width="13" height="13" rx="3" class="delta"/><text x="450" y="30" class="f-mut">SparrowRL（跨云按需）</text></g>
       </svg>
     </div>
-    <figcaption><b>图 9. 相近吞吐下更便宜。</b> 相对理想化的预留 RDMA 集群，SparrowRL 每美元 token 数提高 1.21×（8B）到 1.59×（14B）。它使用跨云按需 GPU，而且还没有计入 RDMA 最小预留周期带来的额外成本。</figcaption>
+    <figcaption><b>图 9. 相近吞吐下更便宜。</b> 相对理想化的预留 RDMA 集群，SparrowRL 每美元 token 数提高 1.21×（8B）到 1.59×（14B）。它使用跨云按需 GPU，而且还没有计入预留 RDMA 集群的最小使用周期成本。</figcaption>
   </figure>
 
   <!-- ===================== IMPACT ===================== -->
