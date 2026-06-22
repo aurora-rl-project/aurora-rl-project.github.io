@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SparrowRL — Reinforcement Learning across Regions</title>
-<meta name="description" content="SparrowRL trains large-model RL on cheap, cross-cloud GPUs over ordinary 1–10 Gbps links at near-RDMA speed by shipping only the ~1% of weights that change each step — losslessly.">
+<meta name="description" content="SparrowRL trains large-model RL on cheap, cross-cloud GPUs over ordinary 1–10 Gbps links at near-RDMA speed by shipping only the ~1% of weights that change each step, losslessly.">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Reinforcement Learning across Regions">
-<meta property="og:description" content="79× smaller weight sync, 2.4–9.5× faster geo-distributed RL, within 8.91% of an ideal RDMA supercluster — by exploiting the 1% sparsity of RL updates.">
+<meta property="og:description" content="79× smaller weight sync, 2.4–9.5× faster geo-distributed RL, within 8.91% of an ideal RDMA supercluster, by exploiting the 1% sparsity of RL updates.">
 <link rel="preconnect" href="https://github.com">
 <link rel="stylesheet" href="assets/style.css?v=2">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231c1f26'/%3E%3Cpath d='M7 18.5c5.6 0 9.2-2.6 11.7-8.2.5 4-.5 7.2-2.8 9.4 2.6-.3 4.8-1.7 6.4-3.9-.8 4.7-4.4 7.7-9.3 7.7-2.1 0-3.9-.5-5.3-1.5z' fill='%23ffffff'/%3E%3C/svg%3E">
@@ -35,7 +35,7 @@
   <div class="wrap">
     <span class="eyebrow">ML Systems · Reinforcement Learning</span>
     <h1 class="title">Reinforcement Learning across Regions</h1>
-    <p class="subtitle">SparrowRL trains large-model RL on cheap, cross-cloud GPUs wired together by ordinary 1–10&nbsp;Gbps links — at the throughput of a dedicated RDMA supercluster — by shipping only the&nbsp;~1% of weights that actually change each step, losslessly.</p>
+    <p class="subtitle">SparrowRL trains large-model RL on cheap, cross-cloud GPUs wired together by ordinary 1–10&nbsp;Gbps links, reaching the throughput of a dedicated RDMA supercluster by shipping only the&nbsp;~1% of weights that actually change each step, losslessly.</p>
     <p class="byline"><span class="names">Sparrow-RL Team</span> · June 2026 · 8 min read</p>
   </div>
 </header>
@@ -51,13 +51,13 @@
     <div class="stat"><div class="big">1.21–1.59×</div><div class="lbl">more tokens per dollar than reserved RDMA clusters</div></div>
   </div>
 
-  <p class="lede">Reinforcement learning is how today's strongest reasoning models are built. But the systems that run it quietly assume something most teams don't have: a rack of GPUs stitched together with hundred-gigabit RDMA. SparrowRL removes that assumption — and gets nearly the same speed over the kind of network you can rent on demand.</p>
+  <p class="lede">Reinforcement learning is how today's strongest reasoning models are built. But the systems that run it quietly assume something most teams don't have: a rack of GPUs stitched together with hundred-gigabit RDMA. SparrowRL removes that assumption, and gets nearly the same speed over the kind of network you can rent on demand.</p>
 
   <!-- ===================== WHO / DEMOCRATIZE ===================== -->
   <h2 id="who"><span class="kicker">Who it's for</span>Democratizing RL training</h2>
-  <p>For the last few years, RL post-training — the step that turns a capable base model into a strong reasoner — has effectively belonged to whoever could reserve a hundred-gigabit RDMA supercluster. The strange part: the GPUs themselves are no longer scarce — you can rent H100s and A100s by the hour from a dozen providers, across a dozen regions. What you <em>can't</em> cheaply rent is the tightly-coupled fabric that fuses them into one cluster — and without that fabric, the weight-sync wall (next section) puts RL training out of reach. SparrowRL is about removing that last barrier — so serious RL post-training runs on the cheap, loosely-connected GPUs almost anyone can already get.</p>
-  <p><strong>For academic labs and small teams</strong>, that turns "we can't get a reserved RDMA cluster" into a non-issue: stitch together on-demand GPUs from whatever clouds and regions are cheap and available, and run real large-model RL over the cross-region links between them — at near-RDMA throughput and a better price.</p>
-  <p><strong>For industry</strong>, disaggregated RL — splitting training and rollout across separate, specialized GPU pools rather than one homogeneous cluster — is becoming the norm at scale. The same trick attacks the network bottleneck inside those deployments: dedicate high-bandwidth GPUs to training while using cheaper, loosely-connected accelerators for rollout generation, without the WAN tax that normally makes that split impractical.</p>
+  <p>For the last few years, RL post-training (the step that turns a capable base model into a strong reasoner) has effectively belonged to whoever could reserve a hundred-gigabit RDMA supercluster. The strange part: the GPUs themselves are no longer scarce. You can rent H100s and A100s by the hour from a dozen providers, across a dozen regions. What you <em>can't</em> cheaply rent is the tightly-coupled fabric that fuses them into one cluster, and without that fabric the weight-sync wall (next section) puts RL training out of reach. SparrowRL is about removing that last barrier, so serious RL post-training runs on the cheap, loosely-connected GPUs almost anyone can already get.</p>
+  <p><strong>For academic labs and small teams</strong>, that turns "we can't get a reserved RDMA cluster" into a non-issue: stitch together on-demand GPUs from whatever clouds and regions are cheap and available, and run real large-model RL over the cross-region links between them, at near-RDMA throughput and a better price.</p>
+  <p><strong>For industry</strong>, disaggregated RL is becoming the norm at scale: rather than one homogeneous cluster, training and rollout run on separate, specialized GPU pools. The two phases have opposite hardware appetites. Training is memory- and bandwidth-bound and wants top-end GPUs with fast interconnect; rollout generation is throughput-bound and runs fine on cheaper accelerators. Splitting them lets each pool be right-sized and scaled independently: add rollout actors on cheap or spot GPUs without touching the trainer, and keep the expensive training GPUs busy instead of idling through generation. What makes this impractical today is the link between the pools, and that is exactly the bottleneck SparrowRL's sparse-delta sync removes, without the WAN tax that normally makes the split a non-starter.</p>
 
   <figure class="bleed">
     <div class="figbox paper">
@@ -66,12 +66,12 @@
     <figcaption><b>Two ways to run RL.</b> <b>(a)</b> Industrial centralized training — Trainer and Actor nodes fused by a 100–800&nbsp;Gbps RDMA fabric in a private, reserved cluster: fast, but high CapEx/OpEx. <b>(b)</b> What SparrowRL targets — a lab's local-GPU Trainer driving rollout Actors scattered across datacenters over ordinary 1–10&nbsp;Gbps cross-region WAN: low-cost and accessible, but bandwidth-bottlenecked.</figcaption>
   </figure>
 
-  <p>RL post-training follows a simple loop: a <strong>Trainer</strong> updates the policy, then broadcasts the new weights to a fleet of <strong>Rollout Actors</strong> that generate samples and send them back. The catch is that broadcast. Because RL refreshes the <em>entire</em> model every single step, the weight transfer sits squarely on the critical path — and it scales with model size. On a datacenter RDMA fabric this is invisible. On a cross-region network, it is the whole story.</p>
+  <p>RL post-training follows a simple loop: a <strong>Trainer</strong> updates the policy, then broadcasts the new weights to a fleet of <strong>Rollout Actors</strong> that generate samples and send them back. The catch is that broadcast. Because RL refreshes the <em>entire</em> model every single step, the weight transfer sits squarely on the critical path, and it scales with model size. On a datacenter RDMA fabric this is invisible. On a cross-region network, it is the whole story.</p>
 
   <!-- ===================== PROBLEM ===================== -->
   <h2 id="problem"><span class="kicker">The wall</span>Why RL needs a supercomputer</h2>
 
-  <p>Consider an 8B model. In BF16 that's ~16&nbsp;GB of weights that must reach <em>every</em> actor, every step. On a 100&nbsp;Gbps RDMA link the sync takes about <strong>1.3&nbsp;seconds</strong> — comfortably hidden inside the ~45-second window the actors spend generating. Move the same job to a 1&nbsp;Gbps cross-cloud link and that sync balloons to <strong>128&nbsp;seconds</strong>, dwarfing generation entirely. Even one-step asynchronous pipelining can't hide a transfer that's longer than the work it's supposed to overlap with, and GPU utilization collapses into the single digits.</p>
+  <p>Consider an 8B model. In BF16 that's ~16&nbsp;GB of weights that must reach <em>every</em> actor, every step. On a 100&nbsp;Gbps RDMA link the sync takes about <strong>1.3&nbsp;seconds</strong>, comfortably hidden inside the ~45-second window the actors spend generating. Move the same job to a 1&nbsp;Gbps cross-cloud link and that sync balloons to <strong>128&nbsp;seconds</strong>, dwarfing generation entirely. Even one-step asynchronous pipelining can't hide a transfer that's longer than the work it's supposed to overlap with, and GPU utilization collapses into the single digits.</p>
 
   <figure class="bleed">
     <div class="figbox">
@@ -99,7 +99,7 @@
     <figcaption><b>The bandwidth wall.</b> Idealized full-model sync for Qwen3-8B (16&nbsp;GB, BF16). RDMA hides the transfer inside the generation window; a 1&nbsp;Gbps cross-region link does not, so even asynchronous RL stalls.</figcaption>
   </figure>
 
-  <p>This is why state-of-the-art RL systems — OpenRLHF, veRL, StreamRL — are built for tightly-coupled RDMA clusters. And those clusters are exactly what most of the field can't easily get:</p>
+  <p>This is why state-of-the-art RL systems (OpenRLHF, veRL, StreamRL) are built for tightly-coupled RDMA clusters. And those clusters are exactly what most of the field can't easily get:</p>
 
   <ul>
     <li><strong>A network premium.</strong> RDMA-connected nodes cost more than plain Ethernet — e.g. ~$39/hr vs ~$31/hr for 16×H100 on one provider, a 26% surcharge for the fabric alone.</li>
@@ -112,9 +112,9 @@
   <!-- ===================== INSIGHT ===================== -->
   <h2 id="insight"><span class="kicker">The insight</span>RL barely changes the model</h2>
 
-  <p>The usual response to a bandwidth problem is to throw more bandwidth at it. We took the opposite view: stop treating the RL loop as a black box, open it up, and look at <em>what</em> is actually being sent. The answer is striking. Unlike pretraining — where gradient descent nudges nearly every parameter every step — a single RL update leaves the overwhelming majority of weights <strong>bit-for-bit unchanged</strong>.</p>
+  <p>The usual response to a bandwidth problem is to throw more bandwidth at it. We took the opposite view: stop treating the RL loop as a black box, open it up, and look at <em>what</em> is actually being sent. The answer is striking. Unlike pretraining, where gradient descent nudges nearly every parameter every step, a single RL update leaves the overwhelming majority of weights <strong>bit-for-bit unchanged</strong>.</p>
 
-  <p>Measuring the element-wise nonzero ratio (the fraction of scalar parameters that differ between consecutive checkpoints), only about <strong>1% of elements actually change value per step</strong> — the other 99% are bit-for-bit identical. The update is fine-grained-sparse: almost every tensor sees <em>some</em> change, but within each tensor only a tiny scatter of elements is touched.</p>
+  <p>Measuring the element-wise nonzero ratio (the fraction of scalar parameters that differ between consecutive checkpoints), only about <strong>1% of elements actually change value per step</strong>. The other 99% stay bit-for-bit identical. The update is fine-grained-sparse: almost every tensor sees <em>some</em> change, but within each tensor only a tiny scatter of elements is touched.</p>
 
   <figure class="bleed">
     <div class="figbox">
@@ -163,9 +163,9 @@
     <figcaption><b>The 1% insight.</b> A single RL update is ~99% sparse. The pattern holds across model families, across RL algorithms (GRPO/RLOO/OPO), and throughout 800 steps of training — it's a structural property, not a transient artifact.</figcaption>
   </figure>
 
-  <p>Why is RL so sparse? <strong>First</strong>, post-training uses learning rates around <code>1e-6</code> — two orders of magnitude below pretraining — so each step nudges weights only slightly, refining behavior without overwriting knowledge. <strong>Second</strong>, RL's updates are <em>in-distribution</em>, which recent theory shows resists forgetting and induces smaller parameter changes than supervised fine-tuning, while regularizers like KL penalties and gradient clipping actively bound how far each step can move. <strong>Lastly — and decisively — the precision the actors run in erases the rest.</strong> Rollout actors never load the trainer's FP32 master weights; they load <strong>BF16</strong> checkpoints, whose resolution near a weight of size |W| is only about |W|/128. Most one-step updates land in the 10⁻⁷–10⁻⁶ range — well <em>below</em> that spacing at the typical weight scale of 10⁻³–10⁻¹ — so when two consecutive checkpoints are rounded to BF16 and differenced, the overwhelming majority of updates collapse to exactly zero. Of the parameters that <em>did</em> change in FP32, only <strong>1.27%</strong> survive into the BF16 delta the actor actually sees. The sparsity isn't just that RL updates are small — it's that they're small enough to vanish into the precision the actors already use.</p>
+  <p>Why is RL so sparse? <strong>First</strong>, post-training uses learning rates around <code>1e-6</code> (two orders of magnitude below pretraining), so each step nudges weights only slightly, refining behavior without overwriting knowledge. <strong>Second</strong>, RL's updates are <em>in-distribution</em>, which recent theory shows resists forgetting and induces smaller parameter changes than supervised fine-tuning, while regularizers like KL penalties and gradient clipping actively bound how far each step can move. <strong>Lastly, and decisively, the precision the actors run in erases the rest.</strong> Rollout actors never load the trainer's FP32 master weights; they load <strong>BF16</strong> checkpoints, whose resolution near a weight of size |W| is only about |W|/128. Most one-step updates land in the 10⁻⁷–10⁻⁶ range, well <em>below</em> that spacing at the typical weight scale of 10⁻³–10⁻¹, so when two consecutive checkpoints are rounded to BF16 and differenced, the overwhelming majority of updates collapse to exactly zero. Of the parameters that <em>did</em> change in FP32, only <strong>1.27%</strong> survive into the BF16 delta the actor actually sees. The sparsity isn't just that RL updates are small; it's that they're small enough to vanish into the precision the actors already use.</p>
 
-  <div class="callout"><span class="tag">The opportunity →</span> A full-weight broadcast spends ~99% of its bytes re-transmitting weights that didn't change. Send the <em>difference</em> instead — and send it <em>losslessly</em>, so training dynamics are untouched.</div>
+  <div class="callout"><span class="tag">The opportunity →</span> A full-weight broadcast spends ~99% of its bytes re-transmitting weights that didn't change. Send the <em>difference</em> instead, and send it <em>losslessly</em>, so training dynamics are untouched.</div>
 
   <!-- ===================== DESIGN ===================== -->
   <h2 id="design"><span class="kicker">The system</span>How SparrowRL works</h2>
@@ -181,7 +181,7 @@
 
   <h3>1 · Lossless sparse deltas</h3>
   <p>Instead of an ephemeral broadcast, every step produces a versioned, immutable artifact that captures only the changed elements at <strong>full precision</strong> — no quantization, no dropped updates, so actors receive exactly the bits the trainer computed. Unifying checkpoint storage and network transfer into one object means a partial or retried transfer is never ambiguous: a rollout either matches a verified version hash or it doesn't.</p>
-  <p>Naively, each change is an <code>(index, value)</code> pair, and the 4-byte index dwarfs the 2-byte value. SparrowRL compresses the position metadata twice over: it stores <em>differences</em> between sorted indices, then encodes those differences with <strong>LEB128 variable-length integers</strong> — small gaps take a single byte, rare large gaps spill into a second. The index footprint drops from 4 bytes to under 2 per entry, shaving another 30–50% off the checkpoint.</p>
+  <p>Naively, each change is an <code>(index, value)</code> pair, and the 4-byte index dwarfs the 2-byte value. SparrowRL compresses the position metadata twice over: it stores <em>differences</em> between sorted indices, then encodes those differences with <strong>LEB128 variable-length integers</strong>: small gaps take a single byte, rare large gaps spill into a second. The index footprint drops from 4 bytes to under 2 per entry, shaving another 30–50% off the checkpoint.</p>
 
   <figure class="bleed">
     <div class="figbox paper">
@@ -201,7 +201,7 @@
   </figure>
 
   <h3>3 · Scheduling for messy fleets</h3>
-  <p>Loosely-coupled actors differ by 2–3× in speed (H100 vs A100 vs L40), and those gaps drift as links congest and spot instances vanish. SparrowRL sizes each actor's share of the batch <strong>in proportion to its measured throughput</strong> (an EMA of tokens/s), so a fast H100 at 5,000 tok/s and an A100 at 2,500 tok/s split a 300-prompt batch 200/100 and finish together. A single feedback signal absorbs every kind of slowdown — GPU throttling, network congestion, contention — without tracking them separately. Version-aware gating keeps stale actors from poisoning a step, and <strong>time-bounded leases</strong> handle failure implicitly: if an actor (or a whole partitioned region) misses its deadline, its prompts simply return to the pool for healthy actors to absorb — no global barrier, no manual recovery. Results are admitted only if their lease is still valid and their version <em>and</em> checkpoint hash match.</p>
+  <p>Loosely-coupled actors differ by 2–3× in speed (H100 vs A100 vs L40), and those gaps drift as links congest and spot instances vanish. SparrowRL sizes each actor's share of the batch <strong>in proportion to its measured throughput</strong> (an EMA of tokens/s), so a fast H100 at 5,000 tok/s and an A100 at 2,500 tok/s split a 300-prompt batch 200/100 and finish together. A single feedback signal absorbs every kind of slowdown (GPU throttling, network congestion, contention) without tracking them separately. Version-aware gating keeps stale actors from poisoning a step, and <strong>time-bounded leases</strong> handle failure implicitly: if an actor (or a whole partitioned region) misses its deadline, its prompts simply return to the pool for healthy actors to absorb, with no global barrier and no manual recovery. Results are admitted only if their lease is still valid and their version <em>and</em> checkpoint hash match.</p>
 
   <!-- ===================== RESULTS ===================== -->
   <h2 id="results"><span class="kicker">Evidence</span>Does it hold up?</h2>
@@ -297,7 +297,7 @@
 
   <!-- ===================== IMPACT ===================== -->
   <h3>No accuracy tax</h3>
-  <p>Because every update is bit-exact, a SparrowRL-trained model is byte-for-byte identical to one trained with full-weight sync — so downstream accuracy isn't merely close, it's <em>the same number</em>. On the held-out reasoning benchmarks:</p>
+  <p>Because every update is bit-exact, a SparrowRL-trained model is byte-for-byte identical to one trained with full-weight sync, so downstream accuracy isn't merely close, it's <em>the same number</em>. On the held-out reasoning benchmarks:</p>
   <div class="tbl-wrap">
   <table>
     <thead><tr><th>Benchmark (pass@1)</th><th class="num">Full-weight sync</th><th class="num">SparrowRL</th><th class="num">Δ</th></tr></thead>
@@ -308,9 +308,9 @@
     </tbody>
   </table>
   </div>
-  <p style="color:var(--muted);font-size:14.5px">Δ = 0 by construction — lossless, bit-exact updates yield an identical model. <em>(Scores shown are representative placeholders; drop in the paper's measured pass@1 numbers.)</em></p>
+  <p style="color:var(--muted);font-size:14.5px">Δ = 0 by construction: lossless, bit-exact updates yield an identical model. <em>(Scores shown are representative placeholders; drop in the paper's measured pass@1 numbers.)</em></p>
 
-  <p>And because the compression is <strong>lossless</strong> — bit-exact updates, a preserved one-step policy lag — none of this trades away model quality, unlike approaches built on quantized gradient compression or aggressive staleness. You get the throughput of an expensive network on a cheap one, and the model never knows the difference.</p>
+  <p>And because the compression is <strong>lossless</strong> (bit-exact updates, a preserved one-step policy lag), none of this trades away model quality, unlike approaches built on quantized gradient compression or aggressive staleness. You get the throughput of an expensive network on a cheap one, and the model never knows the difference.</p>
 
   <hr>
 
