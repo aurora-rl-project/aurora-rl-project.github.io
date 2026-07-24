@@ -1,6 +1,6 @@
-# SparrowRL blog
+# AurorRL blog
 
-A self-contained static site for the SparrowRL announcement post — *"RL over Commodity
+A self-contained static site for the AurorRL announcement post — *"RL over Commodity
 Networks: Overcoming the Bandwidth Barrier with Lossless Sparse Deltas."*
 
 No build step, no framework, no external fonts or JS libraries. All figures are
@@ -23,31 +23,31 @@ uv run python -m http.server 8000 --directory blog
 
 (Any static server works, e.g. `npx serve blog` or VS Code Live Server.)
 
-## Publish to GitHub Pages (sparrow-rl-project.github.io)
+## Publish to GitHub Pages (auror-rl-project.github.io)
 
 A GitHub **user/org Pages** site is served from the root of a repo named
-`<org>.github.io`. To publish under the `sparrow-rl-project` org:
+`<org>.github.io`. To publish under the `auror-rl-project` org:
 
 ```bash
 # 1. create the org Pages repo (one time)
-gh repo create sparrow-rl-project/sparrow-rl-project.github.io --public
+gh repo create auror-rl-project/auror-rl-project.github.io --public
 
 # 2. push the contents of this blog/ folder to its default branch root
 cd blog
 git init -b main
 git add .
-git commit -m "feat: SparrowRL announcement post"
-git remote add origin git@github.com:sparrow-rl-project/sparrow-rl-project.github.io.git
+git commit -m "feat: AurorRL announcement post"
+git remote add origin git@github.com:auror-rl-project/auror-rl-project.github.io.git
 git push -u origin main
 ```
 
 GitHub Pages builds automatically; the site goes live at
-**https://sparrow-rl-project.github.io/** within a minute or two.
+**https://auror-rl-project.github.io/** within a minute or two.
 
 > Project-page alternative: if you'd rather host it under the code repo
-> (`sparrow-rl-project/sparrow-rl`), drop these files in a `docs/` folder and
+> (`auror-rl-project/auror-rl`), drop these files in a `docs/` folder and
 > enable Pages → *Deploy from branch* → `main` / `/docs`. The URL becomes
-> `https://sparrow-rl-project.github.io/sparrow-rl/`.
+> `https://auror-rl-project.github.io/auror-rl/`.
 
 ## Editing
 
