@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------------------
-   AurorRL blog — self-contained theme
+   AuroraRL blog — self-contained theme
    No external fonts or JS frameworks. Figures are inline SVG and inherit the
    --c-* figure variables so they recolor automatically in dark mode.
 ---------------------------------------------------------------------------- */
@@ -19,7 +19,7 @@
   --accent-2:  #3f8f6b;
 
   /* figure palette (used by inline SVG via classes) */
-  --c-delta:   #3a6ea5;   /* AurorRL — calm blue */
+  --c-delta:   #3a6ea5;   /* AuroraRL — calm blue */
   --c-full:    #aab1bd;   /* full-weight baseline — slate */
   --c-ms:      #e9a23b;   /* multi-stream baseline */
   --c-ideal:   #3f8f6b;   /* ideal / gains — calm green */

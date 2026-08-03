@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AurorRL — Reinforcement Learning across Regions</title>
-<meta name="description" content="AurorRL trains large-model RL on flexible, cross-cloud GPUs over ordinary 1–10 Gbps links. It reaches near-RDMA speed by sending a lossless sparse delta for only the ~1% of weights that change each step.">
+<title>AuroraRL — Reinforcement Learning across Regions</title>
+<meta name="description" content="AuroraRL trains large-model RL on flexible, cross-cloud GPUs over ordinary 1–10 Gbps links. It reaches near-RDMA speed by sending a lossless sparse delta for only the ~1% of weights that change each step.">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Reinforcement Learning across Regions">
 <meta property="og:description" content="79× smaller weight sync, 2.4–9.5× faster geo-distributed RL, within 8.91% of an ideal RDMA supercluster, by exploiting the 1% sparsity of RL updates.">
@@ -17,7 +17,7 @@
 <div class="topbar">
   <div class="row">
     <div class="brand">
-      <a href="#top">AurorRL</a>
+      <a href="#top">AuroraRL</a>
     </div>
     <div class="spacer"></div>
     <nav>
@@ -35,8 +35,8 @@
   <div class="wrap">
     <span class="eyebrow">ML Systems · Reinforcement Learning</span>
     <h1 class="title">Reinforcement Learning across Regions</h1>
-    <p class="subtitle">AurorRL trains large-model RL on flexible, cross-cloud GPUs connected by ordinary 1–10&nbsp;Gbps links. It reaches near-RDMA throughput by sending a lossless sparse delta for only the&nbsp;~1% of weights that actually change each step.</p>
-    <p class="byline"><span class="names">AurorRL Team</span> · June 2026 · 8 min read</p>
+    <p class="subtitle">AuroraRL trains large-model RL on flexible, cross-cloud GPUs connected by ordinary 1–10&nbsp;Gbps links. It reaches near-RDMA throughput by sending a lossless sparse delta for only the&nbsp;~1% of weights that actually change each step.</p>
+    <p class="byline"><span class="names">AuroraRL Team</span> · June 2026 · 8 min read</p>
   </div>
 </header>
 
@@ -51,14 +51,16 @@
     <div class="stat"><div class="big">1.21–1.59×</div><div class="lbl">more tokens per dollar than reserved RDMA clusters</div></div>
   </div>
 
-  <p class="lede">Reinforcement learning is how today's strongest reasoning models are built. But the systems that run it quietly assume something most teams don't have: a rack of GPUs stitched together with hundred-gigabit RDMA. AurorRL removes that assumption, reaching nearly the same speed using flexibly rented GPU capacity across providers and regions.</p>
+  <p class="lede">Reinforcement learning is how today's strongest reasoning models are built. But the systems that run it assume something most teams don't have: a rack of GPUs stitched together with hundred-gigabit RDMA. AuroraRL removes that assumption, reaching nearly the same speed using flexibly rented GPU capacity across providers and regions.</p>
 
   <!-- ===================== WHO / MOTIVATION ===================== -->
   <h2 id="who"><span class="kicker">Who it's for</span>Why cross-region RL matters</h2>
-  <p>For the last few years, RL post-training (the step that turns a capable base model into a strong reasoner) has effectively belonged to whoever could reserve a hundred-gigabit RDMA supercluster. Individual GPUs can often be rented flexibly across providers and regions. What is much harder to rent on demand is the tightly-coupled fabric that fuses them into one cluster. Without that fabric, the weight-sync wall (next section) puts RL training out of reach. AurorRL removes that barrier, so serious RL post-training can run on flexible, loosely-connected GPUs.</p>
+  <p>For the last few years, RL post-training (the step that turns a capable base model into a strong reasoner) has effectively belonged to whoever could reserve a hundred-gigabit RDMA supercluster. Individual GPUs can often be rented flexibly across providers and regions. What is much harder to rent on demand is the tightly-coupled fabric that fuses them into one cluster. Without that fabric, the weight-sync wall (next section) puts RL training out of reach. AuroraRL removes that barrier, so serious RL post-training can run on flexible, loosely-connected GPUs.</p>
+  <p>The numbers make this concrete. On AWS, a single <span class="mono">p5.48xlarge</span> node (8×H100) lists at <strong>$55.04 per hour</strong> on demand, roughly $6.88 per GPU-hour. A 512-GPU cluster therefore costs about $3,500 per hour, or <strong>over $590,000 for a one-week run</strong>. Availability is the second hurdle: <a href="https://aws.amazon.com/ec2/capacityblocks/">EC2 Capacity Blocks</a>, the service AWS built for exactly this need, allocates tightly-coupled clusters on a <em>scheduled future start date</em> up to eight weeks out, and caps a single reservation at 64 instances (512 GPUs). Anything larger, or anything needed today, leaves self-service entirely.</p>
+
   <p>That makes cross-region RL more than a deployment trick. It is a cost and access question: can we make RL post-training cheap enough, flexible enough, and reliable enough for the broader research community? If the answer requires reserved RDMA clusters, most teams are locked out. If ordinary GPUs can be stitched together, RL becomes a practical tool for many more groups.</p>
-  <p><strong>For academic labs and small teams</strong>, AurorRL turns a procurement wall into a systems problem. Teams no longer have to chase provider relationships, reserve a fixed RDMA-enabled GPU cluster block, or pay for a long slot before the experiment is proven. They can assemble the GPUs they can actually get: local machines, on-demand cloud instances, and capacity from partner institutions. Start small, add GPUs when they appear, and stop when the run is done. AurorRL makes this patchwork practical for serious RL post-training: cheaper infrastructure, flexible scheduling, and no private supercluster required.</p>
-  <p><strong>For large-scale deployments</strong>, disaggregated RL is becoming important for a practical reason: Trainer and rollout pools do not want the same hardware. Policy optimization is dominated by dense training compute and benefits from tightly connected high-end GPUs. Rollout decoding is often memory-bandwidth and capacity bound, so it can use cheaper and more heterogeneous accelerators. Big providers and large labs already have GPUs spread across regions, clouds, and hardware generations. The opportunity is to turn that fragmented fleet into one RL system, but policy refresh is the blocker: full-weight synchronization makes remote rollout capacity expensive to keep current. AurorRL cuts that network overhead: the trainer stays on the best-connected cluster, while rollout capacity is pulled from wherever GPUs are available. Sparse deltas, relay fan-out, and version-aware scheduling let the system use more of the global fleet instead of leaving remote capacity stranded behind slow cross-region links.</p>
+  <p><strong>For academic labs and small teams</strong>, AuroraRL turns a procurement wall into a systems problem. Teams no longer have to chase provider relationships, reserve a fixed RDMA-enabled GPU cluster block, or pay for a long slot before the experiment is proven. They can assemble the GPUs they can actually get: local machines, on-demand cloud instances, and capacity from partner institutions. Start small, add GPUs when they appear, and stop when the run is done. AuroraRL makes this patchwork practical for serious RL post-training: cheaper infrastructure, flexible scheduling, and no private supercluster required.</p>
+  <p><strong>For large-scale deployments</strong>, disaggregated RL is becoming important for a practical reason: Trainer and rollout pools do not want the same hardware. Policy optimization is dominated by dense training compute and benefits from tightly connected high-end GPUs. Rollout decoding is often memory-bandwidth and capacity bound, so it can use cheaper and more heterogeneous accelerators. Big providers and large labs already have GPUs spread across regions, clouds, and hardware generations. The opportunity is to turn that fragmented fleet into one RL system, but policy refresh is the blocker: full-weight synchronization means every remote actor must pull the entire model again each step, so distant GPUs spend more time waiting for weights than generating rollouts. AuroraRL cuts that network overhead: the trainer stays on the best-connected cluster, while rollout capacity is pulled from wherever GPUs are available.</p>
 
   <p>Figure 1 sets the two regimes side by side: a reserved RDMA supercluster on one side, on-demand GPUs scattered across regions on the other.</p>
 
@@ -69,7 +71,7 @@
     <figcaption><b>Figure 1. Two ways to run RL.</b> <b>(a)</b> Tightly-coupled training: Trainer and Actor nodes fused by a 100–800&nbsp;Gbps RDMA fabric in a private, reserved cluster (fast, but high CapEx/OpEx). <b>(b)</b> Loosely-coupled training: a Trainer driving rollout Actors scattered across datacenters over ordinary 1–10&nbsp;Gbps cross-region WAN (low-cost and accessible, but bandwidth-bottlenecked).</figcaption>
   </figure>
 
-  <p>RL post-training follows a simple loop: a <strong>Trainer</strong> updates the policy, then broadcasts the new weights to a fleet of <strong>Rollout Actors</strong> that generate samples and send them back. The catch is that broadcast. Because RL refreshes the <em>entire</em> model every single step, the weight transfer sits squarely on the critical path, and it scales with model size. On a datacenter RDMA fabric this is invisible. On a cross-region network, it is the whole story.</p>
+  <p>RL post-training follows a simple loop: a <strong>Trainer</strong> updates the policy, then broadcasts the new weights to a fleet of <strong>Rollout Actors</strong> that generate samples and send them back. The catch is that broadcast. Because RL refreshes the <em>entire</em> model every single step, the weight transfer sits squarely on the critical path, and it scales with model size. On a datacenter RDMA fabric this is invisible. On a cross-region network, it becomes the dominant cost of every step.</p>
 
   <!-- ===================== PROBLEM ===================== -->
   <h2 id="problem"><span class="kicker">The wall</span>Why RL needs a supercomputer</h2>
@@ -168,25 +170,25 @@
 
   <p><strong>Why is RL so sparse?</strong> First, RL post-training uses tiny learning rates around <code>1e-6</code>, about two orders below pretraining, so each step only nudges the model. Second, online RL updates are in-distribution, which recent theory connects to less forgetting and smaller parameter movement. Third, KL penalties, gradient clipping, and related regularizers further bound each update. The effect persists in training: the nonzero-update ratio quickly falls below 1% and stays there across 800 steps.</p>
 
-  <p>BF16 rollout serving amplifies this sparsity. Trainers may update FP32 master weights, but actors receive BF16 checkpoints; FP32 changes below the BF16 representation gap round away before inference. AurorRL therefore measures and transfers the BF16 inference-side delta that actors actually need. FP16 has a finer mantissa, but its narrower dynamic range makes it less common for this serving path because it raises underflow risk and often requires loss scaling.</p>
+  <p>BF16 rollout serving amplifies this sparsity. Trainers may update FP32 master weights, but actors receive BF16 checkpoints; FP32 changes below the BF16 representation gap round away before inference. AuroraRL therefore measures and transfers the BF16 inference-side delta that actors actually need. FP16 has a finer mantissa, but its narrower dynamic range makes it less common for this serving path because it raises underflow risk and often requires loss scaling.</p>
 
   <div class="callout"><span class="tag">The opportunity →</span> A full-weight broadcast spends ~99% of its bytes re-transmitting weights that didn't change. Send a <em>lossless difference</em> instead, so training dynamics are untouched.</div>
 
   <!-- ===================== DESIGN ===================== -->
-  <h2 id="design"><span class="kicker">The system</span>How AurorRL works</h2>
+  <h2 id="design"><span class="kicker">The system</span>How AuroraRL works</h2>
 
-  <p>AurorRL turns that one observation into a system. It reuses some training and inference code from <a href="https://github.com/PrimeIntellect-ai/prime-rl">PRIME-RL</a>, including PyTorch FSDP2 training and vLLM inference components. The implementation is ~4.3K lines of Python and does not change the underlying RL algorithm. Three mechanisms work together (Fig. 4).</p>
+  <p>AuroraRL turns that one observation into a system. It reuses some training and inference code from <a href="https://github.com/PrimeIntellect-ai/prime-rl">PRIME-RL</a>, including PyTorch FSDP2 training and vLLM inference components. The implementation is ~4.3K lines of Python and does not change the underlying RL algorithm. Three mechanisms work together (Fig. 4).</p>
 
   <figure class="bleed">
     <div class="figbox paper">
-      <object type="image/svg+xml" data="assets/figures/architecture.svg" style="width:100%;aspect-ratio:516/270;display:block" aria-label="AurorRL architecture: Trainer Hub over WAN to regional relays and rollout actors"></object>
+      <object type="image/svg+xml" data="assets/figures/architecture.svg" style="width:100%;aspect-ratio:516/270;display:block" aria-label="AuroraRL architecture: Trainer Hub over WAN to regional relays and rollout actors"></object>
     </div>
     <figcaption><b>Figure 4. Architecture.</b> The Trainer Hub (policy optimizer, job ledger, checkpoint store) runs on a high-speed RDMA cluster. Each region elects one actor as a <b>Relay</b> that caches the current version and fans the delta out locally, so there is one cross-region transfer per region instead of O(N). Steps: ① issue prompts · ② return rollouts · ③ optimize · ④ encode &amp; store sparse delta · ⑤ relay fan-out.</figcaption>
   </figure>
 
   <h3>1 · Lossless sparse deltas</h3>
   <p>Instead of an ephemeral broadcast, every step produces a versioned, immutable artifact with only the changed elements at <strong>full precision</strong>. There is no quantization and no dropped update; actors receive exactly the bits the trainer computed. Unifying checkpoint storage and network transfer into one object also makes retries unambiguous: a rollout either matches a verified version hash or the result is rejected.</p>
-  <p>Naively, each change is an <code>(index, value)</code> pair, and the 4-byte index dwarfs the 2-byte value. AurorRL cuts this overhead in two steps. It stores <em>differences</em> between sorted indices, then encodes those differences with <strong>LEB128 variable-length integers</strong> (Fig. 5). Small gaps take one byte; rare large gaps spill into a second. The index footprint drops from 4 bytes to under 2 per entry, shaving another 30–50% off the checkpoint.</p>
+  <p>Naively, each change is an <code>(index, value)</code> pair, and the 4-byte index dwarfs the 2-byte value. AuroraRL cuts this overhead in two steps. It stores <em>differences</em> between sorted indices, then encodes those differences with <strong>LEB128 variable-length integers</strong> (Fig. 5). Small gaps take one byte; rare large gaps spill into a second. The index footprint drops from 4 bytes to under 2 per entry, shaving another 30–50% off the checkpoint.</p>
 
   <figure class="bleed">
     <div class="figbox paper">
@@ -196,7 +198,7 @@
   </figure>
 
   <h3>2 · Streaming transfer</h3>
-  <p>Sparse deltas are <em>decomposable</em>, so AurorRL never waits for a whole file. It packetizes each delta into segments and ships the first segment while the rest is still being extracted, creating a cut-through path from trainer to relay to actor (Fig. 6). Segments are striped <strong>round-robin across several TCP streams</strong>. A loss-induced stall on one stream does not block the others, so the WAN link stays saturated. In our US–Canada deployment, multi-stream transfer cuts a 202&nbsp;MB delta from 4.71&nbsp;s to 2.90&nbsp;s. Crucially, transfer overlaps rollout generation. Actors <strong>stage</strong> the next version while generating on the current one, then <strong>commit</strong> it in-place at a safe point between batches. A rollout is never served from a half-applied model.</p>
+  <p>Sparse deltas are <em>decomposable</em>, so AuroraRL never waits for a whole file. It packetizes each delta into segments and ships the first segment while the rest is still being extracted, creating a cut-through path from trainer to relay to actor (Fig. 6). Segments are striped <strong>round-robin across several TCP streams</strong>. A loss-induced stall on one stream does not block the others, so the WAN link stays saturated. In our US–Canada deployment, multi-stream transfer cuts a 202&nbsp;MB delta from 4.71&nbsp;s to 2.90&nbsp;s. Crucially, transfer overlaps rollout generation. Actors <strong>stage</strong> the next version while generating on the current one, then <strong>commit</strong> it in-place at a safe point between batches. A rollout is never served from a half-applied model.</p>
 
   <figure class="bleed">
     <div class="figbox paper">
@@ -206,7 +208,9 @@
   </figure>
 
   <h3>3 · Scheduling for messy fleets</h3>
-  <p>Loosely-coupled actors differ by 2–3× in speed (H100 vs A100 vs L40), and those gaps drift as links congest and spot instances vanish. AurorRL assigns each actor work <strong>in proportion to measured throughput</strong>, using an EMA of tokens/s. A fast H100 at 5,000 tok/s and an A100 at 2,500 tok/s split a 300-prompt batch 200/100 and finish together. One feedback signal absorbs GPU throttling, network congestion, and resource contention without tracking them separately. Version-aware gating keeps stale actors from poisoning a step. <strong>Time-bounded leases</strong> handle failure: if an actor or region misses its deadline, its prompts return to the pool for healthy actors. Results are admitted only when the lease is valid and the version <em>and</em> checkpoint hash match.</p>
+  <p>Loosely-coupled actors differ by 2–3× in speed (H100 vs A100 vs L40), and those gaps drift as links congest and spot instances vanish. AuroraRL assigns each actor work <strong>in proportion to measured throughput</strong>, using an EMA of tokens/s. A fast H100 at 5,000 tok/s and an A100 at 2,500 tok/s split a 300-prompt batch 200/100 and finish together. One feedback signal absorbs GPU throttling, network congestion, and resource contention without tracking them separately. Version-aware gating keeps stale actors from poisoning a step. <strong>Time-bounded leases</strong> handle failure: if an actor or region misses its deadline, its prompts return to the pool for healthy actors. Results are admitted only when the lease is valid and the version <em>and</em> checkpoint hash match.</p>
+
+  <p>Together, sparse deltas, relay fan-out, and version-aware scheduling let the system use more of the global fleet instead of leaving remote capacity stranded behind slow cross-region links.</p>
 
   <!-- ===================== RESULTS ===================== -->
   <h2 id="results"><span class="kicker">Evidence</span>Does it hold up?</h2>
@@ -214,15 +218,15 @@
   <p>The main end-to-end evaluation runs Qwen3 4B/8B/14B with the Trainer on H100s in the US and A100 rollout actors in Canada. The real cross-cloud link fluctuates between ~500&nbsp;Mbps and 1&nbsp;Gbps. Separate stress studies emulate 0.25–10&nbsp;Gbps links, spread actors across Canada, Japan, the Netherlands, and Iceland, evaluate relay fan-out on a Canada–Australia deployment, and mix A100/L40 actors for heterogeneity. Baselines are <b>vanilla cross-DC</b> full-weight broadcast, its <b>multi-stream</b> variant, and <b>Ideal-SingleDC</b>, an idealized 800&nbsp;Gbps RDMA upper bound. Each step now ships a 202&nbsp;MB sparse delta instead of 15.6&nbsp;GB of full weights, a <b>79× cut</b>. Even at 0.25&nbsp;Gbps, the delta crosses in seconds; a full broadcast needs 566 seconds.</p>
 
   <h3>Throughput tracks the ideal</h3>
-  <p>End-to-end, AurorRL nearly matches the RDMA upper bound, as shown in Fig. 7.</p>
+  <p>End-to-end, AuroraRL nearly matches the RDMA upper bound, as shown in Fig. 7.</p>
   <figure class="bleed">
     <div class="figbox">
-      <svg viewBox="0 0 900 300" role="img" aria-label="Grouped bars of end-to-end throughput in tokens per second for Qwen3-4B, 8B and 14B: AurorRL nearly matches the ideal single-DC RDMA baseline.">
+      <svg viewBox="0 0 900 300" role="img" aria-label="Grouped bars of end-to-end throughput in tokens per second for Qwen3-4B, 8B and 14B: AuroraRL nearly matches the ideal single-DC RDMA baseline.">
         <text x="26" y="150" transform="rotate(-90 26 150)" text-anchor="middle" class="f-mut" font-size="16" font-weight="700">Throughput (tokens/s)</text>
         <line x1="120" y1="250" x2="860" y2="250" class="f-line"/>
         <g class="f-grid"><line x1="120" y1="195.8" x2="860" y2="195.8"/><line x1="120" y1="141.7" x2="860" y2="141.7"/><line x1="120" y1="87.5" x2="860" y2="87.5"/></g>
         <g class="f-mut" font-size="11" text-anchor="end"><text x="112" y="254">0</text><text x="112" y="199">5k</text><text x="112" y="145">10k</text><text x="112" y="91">15k</text></g>
-        <g font-size="14"><rect x="323" y="19" width="13" height="13" rx="3" class="ideal"/><text x="343" y="30" class="f-mut">Ideal single-DC RDMA</text><rect x="499" y="19" width="13" height="13" rx="3" class="delta"/><text x="519" y="30" class="f-mut">AurorRL</text></g>
+        <g font-size="14"><rect x="323" y="19" width="13" height="13" rx="3" class="ideal"/><text x="343" y="30" class="f-mut">Ideal single-DC RDMA</text><rect x="499" y="19" width="13" height="13" rx="3" class="delta"/><text x="519" y="30" class="f-mut">AuroraRL</text></g>
         <rect x="182" y="95" width="64" height="155" rx="3" class="ideal"/><text x="214" y="89" class="f-text" font-size="11" text-anchor="middle" font-weight="700">14.3k</text>
         <rect x="254" y="102" width="64" height="148" rx="3" class="delta"/><text x="286" y="96" class="f-text" font-size="11" text-anchor="middle" font-weight="700">13.7k</text>
         <text x="250" y="270" class="f-text" font-size="13" text-anchor="middle" font-weight="700">Qwen3-4B</text>
@@ -235,29 +239,29 @@
         <text x="120" y="292" class="f-mut" font-size="11.5">Within 1.31–8.91% of ideal; 2.4–9.5× above full-weight broadcast over the same WAN.</text>
       </svg>
     </div>
-    <figcaption><b>Figure 7. Near-ideal, across model sizes.</b> Geometric mean across Hendrycks MATH, GSM8K and DeepScaleR. By keeping weight transfer off the critical path, AurorRL lands within <b>1.31–8.91%</b> of ideal single-DC RDMA and <b>2.4–9.5×</b> above full-weight broadcast on the same WAN.</figcaption>
+    <figcaption><b>Figure 7. Near-ideal, across model sizes.</b> Geometric mean across Hendrycks MATH, GSM8K and DeepScaleR. By keeping weight transfer off the critical path, AuroraRL lands within <b>1.31–8.91%</b> of ideal single-DC RDMA and <b>2.4–9.5×</b> above full-weight broadcast on the same WAN.</figcaption>
   </figure>
 
   <h3>It scales across regions</h3>
   <p>The advantage widens as regions are added, as shown in Fig. 8.</p>
   <figure class="bleed">
     <div class="figbox">
-      <svg viewBox="0 0 900 300" role="img" aria-label="Grouped bars: across 1 versus 4 datacenters, the vanilla cross-DC baseline’s throughput collapses from 7137 to 1219 tokens per second while AurorRL stays near 13k.">
+      <svg viewBox="0 0 900 300" role="img" aria-label="Grouped bars: across 1 versus 4 datacenters, the vanilla cross-DC baseline’s throughput collapses from 7137 to 1219 tokens per second while AuroraRL stays near 13k.">
         <text x="26" y="150" transform="rotate(-90 26 150)" text-anchor="middle" class="f-mut" font-size="16" font-weight="700">Throughput (tokens/s)</text>
         <line x1="120" y1="250" x2="860" y2="250" class="f-line"/>
         <g class="f-grid"><line x1="120" y1="185" x2="860" y2="185"/><line x1="120" y1="120" x2="860" y2="120"/><line x1="120" y1="55" x2="860" y2="55"/></g>
         <g class="f-mut" font-size="11" text-anchor="end"><text x="112" y="254">0</text><text x="112" y="189">5k</text><text x="112" y="124">10k</text><text x="112" y="59">15k</text></g>
-        <g font-size="14"><rect x="307" y="19" width="13" height="13" rx="3" class="full"/><text x="327" y="30" class="f-mut">Vanilla cross-DC baseline</text><rect x="515" y="19" width="13" height="13" rx="3" class="delta"/><text x="535" y="30" class="f-mut">AurorRL</text></g>
+        <g font-size="14"><rect x="307" y="19" width="13" height="13" rx="3" class="full"/><text x="327" y="30" class="f-mut">Vanilla cross-DC baseline</text><rect x="515" y="19" width="13" height="13" rx="3" class="delta"/><text x="535" y="30" class="f-mut">AuroraRL</text></g>
         <rect x="226" y="157.2" width="70" height="92.8" rx="3" class="full"/><text x="261" y="151" class="f-text" font-size="11.5" text-anchor="middle" font-weight="700">7,137</text>
         <rect x="304" y="73.2" width="70" height="176.8" rx="3" class="delta"/><text x="339" y="67" class="delta" font-size="11.5" text-anchor="middle" font-weight="700">≈13.6k</text>
         <text x="300" y="270" class="f-text" font-size="13" text-anchor="middle" font-weight="700">1 datacenter</text>
         <rect x="566" y="234.2" width="70" height="15.8" rx="3" class="full"/><text x="601" y="228" class="f-text" font-size="11.5" text-anchor="middle" font-weight="700">1,219</text>
         <rect x="644" y="97.9" width="70" height="152.1" rx="3" class="delta"/><text x="679" y="91" class="delta" font-size="11.5" text-anchor="middle" font-weight="700">≈11.7k</text>
         <text x="640" y="270" class="f-text" font-size="13" text-anchor="middle" font-weight="700">4 datacenters</text>
-        <text x="120" y="292" class="f-mut" font-size="11.5">Full-weight transfer −5.86× across 4 regions; AurorRL only −13.7% (1.9–9× higher throughput).</text>
+        <text x="120" y="292" class="f-mut" font-size="11.5">Full-weight transfer −5.86× across 4 regions; AuroraRL only −13.7% (1.9–9× higher throughput).</text>
       </svg>
     </div>
-    <figcaption><b>Figure 8. Geographic dispersion is nearly free.</b> On Qwen3-4B, full-weight transfer is bound by the slowest actor, so four regions collapse it 5.86× (7,137→1,219 tok/s). AurorRL loses only 13.7%. <span class="f-mut">(Full endpoints measured; AurorRL values from the reported −13.7% / 1.9–9× figures.)</span></figcaption>
+    <figcaption><b>Figure 8. Geographic dispersion is nearly free.</b> On Qwen3-4B, full-weight transfer is bound by the slowest actor, so four regions collapse it 5.86× (7,137→1,219 tok/s). AuroraRL loses only 13.7%. <span class="f-mut">(Full endpoints measured; AuroraRL values from the reported −13.7% / 1.9–9× figures.)</span></figcaption>
   </figure>
 
   <p>Three smaller ablations round out the picture, all on the same testbed:</p>
@@ -276,7 +280,7 @@
   <p>It is also cheaper at matched throughput, as shown in Fig. 9.</p>
   <figure class="bleed">
     <div class="figbox">
-      <svg viewBox="0 0 900 280" role="img" aria-label="Tokens per dollar: AurorRL beats a reserved single-DC RDMA cluster by 1.21x at 8B and 1.59x at 14B.">
+      <svg viewBox="0 0 900 280" role="img" aria-label="Tokens per dollar: AuroraRL beats a reserved single-DC RDMA cluster by 1.21x at 8B and 1.59x at 14B.">
         <text x="26" y="148" transform="rotate(-90 26 148)" text-anchor="middle" class="f-mut" font-size="16" font-weight="700">Tokens per dollar (M)</text>
         <!-- y 0..4 over y 240..60 (180px) -> 45px/unit -->
         <line x1="120" y1="240" x2="860" y2="240" class="f-line"/>
@@ -286,28 +290,28 @@
         <text x="330" y="275" class="f-text" font-size="13" font-weight="700" text-anchor="middle">Qwen3-8B</text>
         <!-- SingleDC 2.99 -> h=134.6 -> y=105.4 -->
         <rect x="256" y="105" width="62" height="135" rx="3" class="full"/><text x="287" y="99" class="f-text" font-size="11.5" text-anchor="middle" font-weight="700">2.99</text><text x="287" y="256" class="f-mut" font-size="10.5" text-anchor="middle">$19.92/hr</text>
-        <!-- AurorRL 3.60 -> h=162 -> y=78 -->
+        <!-- AuroraRL 3.60 -> h=162 -> y=78 -->
         <rect x="342" y="78" width="62" height="162" rx="3" class="delta"/><text x="373" y="72" class="f-text" font-size="11.5" text-anchor="middle" font-weight="700">3.60</text><text x="373" y="256" class="f-mut" font-size="10.5" text-anchor="middle">$15.88/hr</text>
         <text x="330" y="44" class="ideal" font-size="13" font-weight="800" text-anchor="middle">1.21×</text>
         <!-- 14B group x~640 -->
         <text x="650" y="275" class="f-text" font-size="13" font-weight="700" text-anchor="middle">Qwen3-14B</text>
         <!-- SingleDC 1.33 -> h=59.9 -> y=180.1 -->
         <rect x="576" y="180" width="62" height="60" rx="3" class="full"/><text x="607" y="174" class="f-text" font-size="11.5" text-anchor="middle" font-weight="700">1.33</text><text x="607" y="256" class="f-mut" font-size="10.5" text-anchor="middle">$39.84/hr</text>
-        <!-- AurorRL 2.12 -> h=95.4 -> y=144.6 -->
+        <!-- AuroraRL 2.12 -> h=95.4 -> y=144.6 -->
         <rect x="662" y="145" width="62" height="95" rx="3" class="delta"/><text x="693" y="139" class="f-text" font-size="11.5" text-anchor="middle" font-weight="700">2.12</text><text x="693" y="256" class="f-mut" font-size="10.5" text-anchor="middle">$23.82/hr</text>
         <text x="650" y="120" class="ideal" font-size="13" font-weight="800" text-anchor="middle">1.59×</text>
         <!-- legend -->
-        <g font-size="14"><rect x="234" y="19" width="13" height="13" rx="3" class="full"/><text x="254" y="30" class="f-mut">Reserved single-DC RDMA</text><rect x="430" y="19" width="13" height="13" rx="3" class="delta"/><text x="450" y="30" class="f-mut">AurorRL (cross-cloud on-demand)</text></g>
+        <g font-size="14"><rect x="234" y="19" width="13" height="13" rx="3" class="full"/><text x="254" y="30" class="f-mut">Reserved single-DC RDMA</text><rect x="430" y="19" width="13" height="13" rx="3" class="delta"/><text x="450" y="30" class="f-mut">AuroraRL (cross-cloud on-demand)</text></g>
       </svg>
     </div>
-    <figcaption><b>Figure 9. Cheaper at comparable throughput.</b> Against an idealized reserved RDMA cluster, AurorRL delivers 1.21× (8B) to 1.59× (14B) more tokens per dollar. It uses on-demand, cross-cloud GPUs, even before accounting for minimum commitments on RDMA clusters.</figcaption>
+    <figcaption><b>Figure 9. Cheaper at comparable throughput.</b> Against an idealized reserved RDMA cluster, AuroraRL delivers 1.21× (8B) to 1.59× (14B) more tokens per dollar. It uses on-demand, cross-cloud GPUs, even before accounting for minimum commitments on RDMA clusters.</figcaption>
   </figure>
 
   <!-- ===================== IMPACT ===================== -->
   <h3>Lossless by construction</h3>
-  <p>AurorRL sends a lossless delta, not a compressed gradient or quantized approximation. Under the same one-step asynchronous schedule, actors receive the same policy update that a full-weight refresh would deliver. The system changes how bytes move, not the RL objective, rollout policy semantics, or optimizer update.</p>
+  <p>AuroraRL sends a lossless delta, not a compressed gradient or quantized approximation. Under the same one-step asynchronous schedule, actors receive the same policy update that a full-weight refresh would deliver. The system changes how bytes move, not the RL objective, rollout policy semantics, or optimizer update.</p>
 
-  <p>This is why the paper frames AurorRL as improving throughput without sacrificing accuracy. Sparse-delta transfer preserves full precision for nonzero values and activates updates only at safe version-switch points. You get most of the throughput of a high-bandwidth fabric on commodity links, without making model quality a compression trade-off.</p>
+  <p>This is why the paper frames AuroraRL as improving throughput without sacrificing accuracy. Sparse-delta transfer preserves full precision for nonzero values and activates updates only at safe version-switch points. You get most of the throughput of a high-bandwidth fabric on commodity links, without making model quality a compression trade-off.</p>
 
   <hr>
 
@@ -329,7 +333,7 @@
     <a class="btn" href="https://github.com/aurora-rl-project/aurora-rl">GitHub repo</a>
   </div>
   <div class="cite">
-<pre>@article{aurorrl2026,
+<pre>@article{aurorarl2026,
   title   = {RL over Commodity Networks: Overcoming the
              Bandwidth Barrier with Lossless Sparse Deltas},
   author  = {Ruan, Chaoyi and Luo, Geng and Wan, Xinyi and Zhao, Long
@@ -360,7 +364,7 @@
   // theme: respect saved choice, else system
   var root = document.documentElement;
   var saved = null;
-  try { saved = localStorage.getItem('auror-theme'); } catch (e) {}
+  try { saved = localStorage.getItem('aurora-theme'); } catch (e) {}
   if (saved) root.setAttribute('data-theme', saved);
   var btn = document.getElementById('themeBtn');
   btn.addEventListener('click', function () {
@@ -368,7 +372,7 @@
     if (!cur) cur = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     var next = cur === 'dark' ? 'light' : 'dark';
     root.setAttribute('data-theme', next);
-    try { localStorage.setItem('auror-theme', next); } catch (e) {}
+    try { localStorage.setItem('aurora-theme', next); } catch (e) {}
   });
 
   // build the sparsity grid from metadata (keeps SVG markup compact)

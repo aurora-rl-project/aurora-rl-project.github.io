@@ -1,6 +1,6 @@
-# AurorRL blog
+# AuroraRL blog
 
-A self-contained static site for the AurorRL announcement post — *"RL over Commodity
+A self-contained static site for the AuroraRL announcement post — *"RL over Commodity
 Networks: Overcoming the Bandwidth Barrier with Lossless Sparse Deltas."*
 
 No build step, no framework, no external fonts or JS libraries. All figures are
@@ -36,7 +36,7 @@ gh repo create aurora-rl-project/aurora-rl-project.github.io --public
 cd blog
 git init -b main
 git add .
-git commit -m "feat: AurorRL announcement post"
+git commit -m "feat: AuroraRL announcement post"
 git remote add origin git@github.com:aurora-rl-project/aurora-rl-project.github.io.git
 git push -u origin main
 ```
