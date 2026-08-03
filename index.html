@@ -107,7 +107,7 @@
   <p>This is why state-of-the-art RL systems (OpenRLHF, veRL, StreamRL) are built for tightly-coupled RDMA clusters. And those clusters are exactly what most of the field can't easily get:</p>
 
   <ul>
-    <li><strong>A network premium.</strong> RDMA-connected nodes cost more than plain Ethernet: ~$39/hr vs ~$31/hr for 16×H100 on one provider, a 26% surcharge for the fabric alone.</li>
+    <li><strong>A network premium.</strong> On one provider, an identical 16×H100 allocation costs ~$39/hr with an RDMA fabric versus ~$31/hr on standard Ethernet. Same GPUs, same count, a 26% surcharge for the interconnect alone.</li>
     <li><strong>Minimum commitments.</strong> Providers gate these clusters behind 24-hour to one-week reservations, so an exploratory 48-hour run can inflate into a one-week bill, up to 3.5× the cost you needed.</li>
     <li><strong>Procurement gatekeeping.</strong> Reserving large RDMA blocks often requires sales relationships and credit lines that academic labs, government groups, and startups simply don't have.</li>
   </ul>
@@ -134,7 +134,7 @@
         <g id="grid"></g>
         <script type="application/json" id="gridmeta">{"cols":24,"rows":15,"x":28,"y":70,"step":11,"size":9,"hot":[53,162,219,308]}</script>
         <text x="28" y="252" class="delta" font-size="14" font-weight="700">≈ 1% changed</text>
-        <text x="120" y="252" class="f-mut" font-size="13">the other 99% re-sent for nothing by a full broadcast</text>
+        <text x="28" y="272" class="f-mut" font-size="13">the other 99% re-sent for nothing by a full broadcast</text>
 
         <!-- RIGHT: nonzero ratio bars -->
         <text x="470" y="32" class="f-text" font-size="16" font-weight="700">Nonzero-update ratio, per step</text>
@@ -162,7 +162,7 @@
         <text x="667" y="256" class="f-mut" font-size="11" text-anchor="middle">Llama3-8B</text>
         <text x="745" y="256" class="f-mut" font-size="11" text-anchor="middle">GLM4-9B</text>
         <text x="823" y="256" class="f-mut" font-size="11" text-anchor="middle">Qwen2.5-72B</text>
-        <text x="470" y="296" class="f-mut" font-size="12.5">Same ~1% under GRPO (0.96%), RLOO (0.93%), OPO (1.06%); stable below 1% across 800 steps.</text>
+        <text x="470" y="296" class="f-mut" font-size="12.5">Same ~1% under GRPO (0.96%), RLOO (0.93%), OPO (1.06%).</text>
       </svg>
     </div>
     <figcaption><b>Figure 3. The 1% insight.</b> A single RL update is ~99% sparse. The pattern holds across model families, across RL algorithms (GRPO/RLOO/OPO), and throughout 800 steps of training. It's a structural property, not a transient artifact.</figcaption>
@@ -188,7 +188,7 @@
 
   <h3>1 · Lossless sparse deltas</h3>
   <p>Instead of an ephemeral broadcast, every step produces a versioned, immutable artifact with only the changed elements at <strong>full precision</strong>. There is no quantization and no dropped update; actors receive exactly the bits the trainer computed. Unifying checkpoint storage and network transfer into one object also makes retries unambiguous: a rollout either matches a verified version hash or the result is rejected.</p>
-  <p>Naively, each change is an <code>(index, value)</code> pair, and the 4-byte index dwarfs the 2-byte value. AuroraRL cuts this overhead in two steps. It stores <em>differences</em> between sorted indices, then encodes those differences with <strong>LEB128 variable-length integers</strong> (Fig. 5). Small gaps take one byte; rare large gaps spill into a second. The index footprint drops from 4 bytes to under 2 per entry, shaving another 30–50% off the checkpoint.</p>
+  <p>Naively, each change is an <code>(index, value)</code> pair, and the 4-byte index takes twice the space of the 2-byte value it locates. AuroraRL cuts this overhead in two steps. It stores <em>differences</em> between sorted indices, then encodes those differences with <strong>LEB128 variable-length integers</strong> (Fig. 5). Small gaps take one byte; rare large gaps spill into a second. The index footprint drops from 4 bytes to under 2 per entry, shaving another 30–50% off the checkpoint.</p>
 
   <figure class="bleed">
     <div class="figbox paper">
@@ -243,7 +243,7 @@
   </figure>
 
   <h3>It scales across regions</h3>
-  <p>The advantage widens as regions are added, as shown in Fig. 8.</p>
+  <p>The advantage widens as regions are added, as shown in Fig. 8. Note that the reference bar changes between the two figures. Figure 7 compares against <b>Ideal-SingleDC</b>, an idealized RDMA upper bound, so AuroraRL sits just below it. Figure 8 compares against the <b>vanilla cross-DC</b> baseline doing full-weight broadcast over the same WAN, so AuroraRL sits far above it.</p>
   <figure class="bleed">
     <div class="figbox">
       <svg viewBox="0 0 900 300" role="img" aria-label="Grouped bars: across 1 versus 4 datacenters, the vanilla cross-DC baseline’s throughput collapses from 7137 to 1219 tokens per second while AuroraRL stays near 13k.">
